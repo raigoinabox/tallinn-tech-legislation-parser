@@ -1,0 +1,8 @@
+graph.pdf
+graph.dot
+leg
+.*.swp
+*.o
+tags
+core
+cache.db
