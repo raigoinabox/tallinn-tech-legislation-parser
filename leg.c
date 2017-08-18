@@ -106,6 +106,28 @@ int main(int argc, char const* argv[])
 	{
 		return EXIT_FAILURE;
 	}
+
+	FILE* file;
+	if (args.output_file_name == NULL)
+	{
+		file = stdout;
+	}
+	else
+	{
+		file = fopen(args.output_file_name, "w");
+		if (file == NULL)
+		{
+			fprintf(stderr, "Could not open file %s.\n", args.output_file_name);
+			return EXIT_FAILURE;
+		}
+	}
+
+	const char* format = args.format;
+	if (format == NULL || strcmp(format, "") == 0)
+	{
+		format = "pdf";
+	}
+
 	if (args.print_help)
 	{
 		print_help(argv[0]);
@@ -138,14 +160,7 @@ int main(int argc, char const* argv[])
 		remove_foreign_sections(sections);
 	}
 	remove_single_sections(&sections);
-	if (args.dot_format)
-	{
-		print_dot_from_sections(sections);
-	}
-	else
-	{
-		print_pdf_from_sections(sections);
-	}
+	print_from_sections(file, sections, format);
 
 	free_sections(&sections);
 	xmlFreeDoc(doc);

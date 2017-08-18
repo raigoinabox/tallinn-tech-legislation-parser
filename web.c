@@ -133,8 +133,8 @@ char* normalize_url(const char* url)
 		return NULL;
 	}
 
-	char* normalized = safe_malloc(strlen(type) + strlen(year) + strlen(
-	                                   number) + 128, sizeof(char));
+	char* normalized = malloc_a(strlen(type) + strlen(year) + strlen(
+	                                number) + 128, sizeof(char));
 	strcpy(normalized, "http://www.legislation.gov.uk/");
 	strcat(normalized, type);
 	strcat(normalized, "/");
@@ -174,7 +174,7 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
 		assert(sqlite3_column_type(statement, 0) == SQLITE_TEXT);
 		const char* cached_content = (const char*) sqlite3_column_text(statement, 0);
 		page.contents_size = sqlite3_column_bytes(statement, 0);
-		page.contents = safe_malloc(page.contents_size + 1, sizeof(unsigned char));
+		page.contents = malloc_a(page.contents_size + 1, sizeof(unsigned char));
 		strncpy(page.contents, cached_content, page.contents_size);
 		page.contents[page.contents_size] = '\0';
 

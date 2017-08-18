@@ -28,7 +28,7 @@
 
 static char* get_node_id(char* section_number)
 {
-	char* node_id = safe_malloc(strlen(section_number) + 20, sizeof(char));
+	char* node_id = malloc_a(strlen(section_number) + 20, sizeof(char));
 	int error = snprintf(node_id, 100, "section_%s", section_number);
 	if (error < 0)
 	{
@@ -37,7 +37,8 @@ static char* get_node_id(char* section_number)
 	return node_id;
 }
 
-static void print_from_sections(struct sections connections, const char* format)
+void print_from_sections(FILE* file, struct sections connections,
+                         const char* format)
 {
 	Agraph_t *graph = agopen("G", Agstrictdirected, NULL);
 	for (int32_t i = 0; i < connections.elem_count; i++)
@@ -62,19 +63,9 @@ static void print_from_sections(struct sections connections, const char* format)
 
 	GVC_t* gvc = gvContext();
 	gvLayout(gvc, graph, "dot");
-	gvRender(gvc, graph, format, stdout);
+	gvRender(gvc, graph, format, file);
 
 	gvFreeLayout(gvc, graph);
 	agclose(graph);
 	gvFreeContext(gvc);
-}
-
-void print_pdf_from_sections(struct sections connections)
-{
-	print_from_sections(connections, "pdf");
-}
-
-void print_dot_from_sections(struct sections connections)
-{
-	print_from_sections(connections, "canon");
 }

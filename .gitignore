@@ -3,6 +3,7 @@ graph.dot
 leg
 .*.swp
 *.o
+*.d
 tags
 core
 cache.db

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-void* safe_malloc(size_t nmemb, size_t memb_size)
+void* malloc_a(size_t nmemb, size_t memb_size)
 {
 	void* result = malloc(nmemb * memb_size);
 	if (result == NULL)
@@ -24,17 +24,16 @@ bool str_is_prefix(const char* string, const char* prefix)
 	return *prefix == '\0';
 }
 
-char* str_tokenize(char* string, char delimit)
+int32_t str_tokenize(char* string, char delimit)
 {
-	char* char_p = string;
-	while (*char_p != '\0')
+	for (int index = 0; string[index] != '\0'; index++)
 	{
-		if (*char_p == delimit)
+		if (string[index] == delimit)
 		{
-			*char_p = '\0';
-			return char_p + 1;
+			string[index] = '\0';
+			return index + 1;
 		}
 	}
 
-	return char_p;
+	return -1;
 }

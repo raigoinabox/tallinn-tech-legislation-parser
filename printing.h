@@ -1,4 +1,4 @@
 #pragma once
 
-void print_pdf_from_sections(struct sections connections);
-void print_dot_from_sections(struct sections connections);
+void print_from_sections(FILE* file, struct sections connections,
+                         const char* format);
