@@ -1,15 +1,15 @@
 CFLAGS += -Wall -Wextra -Wpedantic -g -std=c11 -MMD
 
-CFLAGS += `pkg-config --cflags libcurl`
-LDLIBS += `pkg-config --libs libcurl`
-CFLAGS += `pkg-config --cflags libxml-2.0`
-LDLIBS += `pkg-config --libs libxml-2.0`
-CFLAGS += `pkg-config --cflags libpcre`
-LDLIBS += `pkg-config --libs libpcre`
-CFLAGS += `pkg-config --cflags libgvc`
-LDLIBS += `pkg-config --libs libgvc`
-CFLAGS += `pkg-config --cflags sqlite3`
-LDLIBS += `pkg-config --libs sqlite3`
+CFLAGS += $(shell pkg-config --cflags libcurl)
+LDLIBS += $(shell pkg-config --libs libcurl)
+CFLAGS += $(shell pkg-config --cflags libxml-2.0)
+LDLIBS += $(shell pkg-config --libs libxml-2.0)
+CFLAGS += $(shell pkg-config --cflags libpcre)
+LDLIBS += $(shell pkg-config --libs libpcre)
+CFLAGS += $(shell pkg-config --cflags libgvc)
+LDLIBS += $(shell pkg-config --libs libgvc)
+CFLAGS += $(shell pkg-config --cflags sqlite3)
+LDLIBS += $(shell pkg-config --libs sqlite3)
 
 object_files := $(patsubst %.c,%.o,$(wildcard *.c))
 

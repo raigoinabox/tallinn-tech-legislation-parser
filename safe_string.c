@@ -7,10 +7,11 @@ struct string_s strs_init(char* string, int32_t size)
 	assert(0 < size);
 
 	string[0] = '\0';
-	return (struct string_s) {
+	return (struct string_s)
+	{
 		.content = string,
-		.size = size,
-		.length = 0
+		 .size = size,
+		  .length = 0
 	};
 }
 
@@ -19,10 +20,11 @@ struct string_s strs_initn(char* string, int32_t size, int32_t length)
 	assert(length < size);
 
 	string[length] = '\0';
-	return (struct string_s) {
+	return (struct string_s)
+	{
 		.content = string,
-		.size = size,
-		.length = length
+		 .size = size,
+		  .length = length
 	};
 }
 

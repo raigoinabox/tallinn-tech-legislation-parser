@@ -29,4 +29,5 @@ struct string_c
 struct string_s strs_init(char* string, int32_t size);
 struct string_s strs_initn(char* string, int32_t size, int32_t length);
 void strs_append(struct string_s* string_p, const char* content);
-void strs_appendn(struct string_s* string_p, const char* content, int32_t count);
+void strs_appendn(struct string_s* string_p, const char* content,
+                  int32_t count);
