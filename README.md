@@ -15,9 +15,10 @@ Get
 * libcurl
 * libpcre.
 * libgraphviz-dev
+* sqlite3
 
 and write
-> make leg
+> make
 
 The program was written, compiled and tested in Ubuntu 16.04. The code is
 supposed to be portably written and the libraries are suppose to be portable
