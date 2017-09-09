@@ -27,11 +27,13 @@ Usage
 -----
 Write
 > ./leg <legislation.gov.uk act url> --output=<file>
+
 Then the program will output the connection between sections inside the act
 in pdf format. References to outside acts are ignored.
 
 Write
 > ./leg -h
+
 for more information about different options.
 
 The program achieves this with a mix of parsing the xml and parsing the text.
