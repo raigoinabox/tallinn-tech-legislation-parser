@@ -99,49 +99,69 @@ cleanup_1:
 	abort();
 }
 
-struct string
+void legislation_free(struct legislation* legislation_p)
 {
-	char* content;
-	int32_t size;
-	int32_t length;
-	_Bool constant;
-};
+	struct legislation legislation = *legislation_p;
+	strd_free(&legislation.type);
+	strd_free(&legislation.year);
+	strd_free(&legislation.number);
+	*legislation_p = legislation;
+}
 
-char* normalize_url(const char* url)
+bool parse_url(struct legislation* result, const char* url)
 {
 	char url_buffer[strlen(url) + 1];
 	strcpy(url_buffer, url);
 	char* domain = strstr(url_buffer, "legislation.gov.uk/");
 	if (domain == NULL)
 	{
-		return NULL;
+		return false;
 	}
 	strtok(domain, "/");
+
+	struct legislation legislation;
 	char* type = strtok(NULL, "/");
 	if (type == NULL)
 	{
-		return NULL;
+		return false;
 	}
 	char* year = strtok(NULL, "/");
 	if (year == NULL)
 	{
-		return NULL;
+		return false;
 	}
 	char* number = strtok(NULL, "/");
 	if (number == NULL)
 	{
-		return NULL;
+		return false;
 	}
 
-	char* normalized = malloc_a(strlen(type) + strlen(year) + strlen(
-	                                number) + 128, sizeof(char));
-	strcpy(normalized, "http://www.legislation.gov.uk/");
-	strcat(normalized, type);
-	strcat(normalized, "/");
-	strcat(normalized, year);
-	strcat(normalized, "/");
-	strcat(normalized, number);
-	strcat(normalized, "/data.xml");
+	legislation.type = strd_mallocn(strlen(type) + 10);
+	strd_append(&legislation.type, type);
+
+	legislation.year = strd_mallocn(strlen(year) + 10);
+	strd_append(&legislation.year, year);
+
+	legislation.number = strd_mallocn(strlen(number) + 10);
+	strd_append(&legislation.number, number);
+
+	*result = legislation;
+
+	return true;
+}
+
+struct string_d get_api_url(struct legislation legislation)
+{
+	struct string_d normalized = strd_mallocn(strd_length(legislation.type) +
+	                             strd_length(legislation.year) + strd_length(
+	                                 legislation.number) + 128);
+	strd_append(&normalized, "http://www.legislation.gov.uk/");
+	strd_append(&normalized, strd_content(legislation.type));
+	strd_append(&normalized, "/");
+	strd_append(&normalized, strd_content(legislation.year));
+	strd_append(&normalized, "/");
+	strd_append(&normalized, strd_content(legislation.number));
+	strd_append(&normalized, "/data.xml");
 
 	return normalized;
 }

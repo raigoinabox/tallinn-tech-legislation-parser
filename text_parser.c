@@ -393,8 +393,8 @@ struct section_references get_references_from_text(const char* text)
 		abort();
 	}
 
-	int ovector_size = 30;
-	int ovector[ovector_size];
+	enum { ovector_size = 30 };
+	int ovector[30];
 	int text_len = strlen(text);
 	int matches = pcre_exec(regex, NULL, text, text_len, 0, 0, ovector,
 	                        ovector_size);
