@@ -9,15 +9,21 @@ For more information visit: http://www.legislation.gov.uk/developer
 
 Compilation on Ubuntu
 ---------------------
+This project uses meson for building: http://mesonbuild.com/.
+
 Get
 * libxml2
 * libcurl
 * libpcre.
 * libgraphviz-dev
 * sqlite3
+* meson
 
 and write
-> make
+> mkdir build
+> meson build
+> cd build
+> ninja
 
 The program was written, compiled and tested in Ubuntu 16.04. The code is
 supposed to be portably written and the libraries are supposed to be portable
