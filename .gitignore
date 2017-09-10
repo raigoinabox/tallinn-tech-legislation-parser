@@ -1,9 +1,7 @@
 graph.pdf
 graph.dot
-leg
 .*.swp
-*.o
-*.d
 tags
 core
 cache.db
+build

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct run_info
+struct user_args
 {
 	const char* url;
 	const char* output_file_name;
@@ -13,4 +13,4 @@ struct run_info
 };
 
 bool print_help(const char* program_name);
-bool parse_args(struct run_info* result, int argc, const char* argv[]);
+bool parse_args(struct user_args* result, int argc, const char* argv[]);

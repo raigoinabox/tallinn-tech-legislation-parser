@@ -26,11 +26,10 @@ as well.
 Usage
 -----
 Write
-> ./leg <legislation.gov.uk act url> --output=&lt;file&gt;
+> ./leg <legislation.gov.uk act url>
 
-Then the program will write into &lt;file&gt; the connections between
-sections inside the act in pdf format. References to outside acts are
-ignored.
+Then the program will write into a default file the connections between
+sections inside the act in pdf format. References to outside acts are ignored.
 
 Write
 > ./leg -h
