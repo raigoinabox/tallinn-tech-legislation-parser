@@ -358,12 +358,9 @@ bool parse_args(struct user_args* result, int argc, char const* argv[])
 		{
 			keep_parsing_options = false;
 		}
-		else
+		else if (!parse_long_option(&option, &option_argument, argument))
 		{
-			if (!parse_long_option(&option, &option_argument, argument))
-			{
-				goto error;
-			}
+			goto error;
 		}
 
 		if (!is_null_option(option) && (option.argument_name == NULL
