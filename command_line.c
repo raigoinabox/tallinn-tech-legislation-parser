@@ -17,29 +17,29 @@ struct option_parameter
 	const char* long_form;
 	const char* help_text;
 	const char* argument_name;
-	struct user_args (*set_option_data)(struct user_args, const char*);
+	struct print_args (*set_option_data)(struct print_args, const char*);
 };
 
-static struct user_args set_print_help_data(struct user_args result,
+static struct print_args set_print_help_data(struct print_args result,
         const char* argument)
 {
 	(void) argument;
 	result.print_help = true;
 	return result;
 }
-static struct user_args set_output_data(struct user_args result,
+static struct print_args set_output_data(struct print_args result,
                                         const char* argument)
 {
 	result.output_file_name = argument;
 	return result;
 }
-static struct user_args set_format_data(struct user_args result,
+static struct print_args set_format_data(struct print_args result,
                                         const char* argument)
 {
 	result.format = argument;
 	return result;
 }
-static struct user_args set_debug_data(struct user_args result,
+static struct print_args set_debug_data(struct print_args result,
                                        const char* argument)
 {
 	(void) argument;
@@ -310,12 +310,12 @@ bool print_help(const char* program_name)
 	return true;
 }
 
-bool parse_args(struct user_args* result, int argc, char const* argv[])
+bool parse_args(struct print_args* result, int argc, char const* argv[])
 {
 	assert(result != NULL);
 
 	int32_t argument_count = 0;
-	struct user_args args = { 0 };
+	struct print_args args = { 0 };
 	bool keep_parsing_options = true;
 	struct option_parameter option = {0};
 	const char* option_argument;

@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct user_args
+struct print_args
 {
 	const char* url;
 	const char* output_file_name;
@@ -12,5 +12,9 @@ struct user_args
 	bool debug;
 };
 
+struct dbu_args {
+	int32_t hello;
+};
+
 bool print_help(const char* program_name);
-bool parse_args(struct user_args* result, int argc, const char* argv[]);
+bool parse_args(struct print_args* result, int argc, const char* argv[]);

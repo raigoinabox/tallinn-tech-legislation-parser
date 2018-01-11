@@ -156,7 +156,7 @@ static bool get_default_file(FILE** result, struct legislation legislation, cons
 	return true;
 }
 
-static bool process_args(struct run_info* result, struct user_args args)
+static bool process_args(struct run_info* result, struct print_args args)
 {
 	struct run_info run_info;
 
@@ -210,7 +210,7 @@ int main(int argc, char const* argv[])
 		abort();
 	}
 
-	struct user_args args;
+	struct print_args args;
 	bool success = parse_args(&args, argc, argv);
 	if (!success)
 	{
