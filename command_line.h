@@ -17,4 +17,4 @@ struct dbu_args {
 };
 
 bool print_help(const char* program_name);
-bool parse_args(struct print_args* result, int argc, const char* argv[]);
+bool parse_print_args(struct print_args* result, int argc, char const* argv[], int32_t offset);

@@ -1,94 +1,36 @@
 #include "safe_string.h"
 
 #include <assert.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "util.h"
 
-struct string_s strs_init(char* string, int32_t size)
-{
-	assert(0 < size);
-
-	string[0] = '\0';
-	return (struct string_s)
-	{
-		.content = string,
-		 .size = size,
-		  .length = 0
-	};
+static void expand_s(struct string* string_p) {
+	(void) string_p;
+	abort();
 }
-
-void strs_append(struct string_s* string_p, const char* content)
-{
-	struct string_s string = *string_p;
-	while (*content != '\0')
+static void expand_d(struct string* string_p) {
+	struct string string = *string_p;
+	string.size *= 2;
+	string.content = realloc(string.content, string.size * sizeof(*string.content));
+	if (string.content == NULL)
 	{
-		assert(string.length < string.size - 1);
-		string.content[string.length] = *content;
-		string.length += 1;
-		content++;
+		abort();
 	}
-	string.content[string.length] = '\0';
-
 	*string_p = string;
 }
 
-void strs_appendn(struct string_s* string_p, const char* content, int32_t count)
-{
-	struct string_s string = *string_p;
-	for (int i = 0; i < count && *content != '\0'; i += 1)
-	{
-		assert(string.length < string.size - 1);
-		string.content[string.length] = *content;
-		string.length += 1;
-		content += 1;
-	}
-	string.content[string.length] = '\0';
-
-	*string_p = string;
-}
-
-struct string_d strd_mallocn(int32_t size)
-{
-	assert(0 < size);
-
-	struct string_d string =
-	{
-		.content = malloc_a(size, sizeof(*string.content)),
-		.size = size,
-		.length = 0
-	};
-	string.content[0] = '\0';
-
-	return string;
-}
-
-void strd_free(struct string_d* string_p)
-{
-	struct string_d string = *string_p;
-
-	free(string.content);
-	string.length = 0;
-	string.size = 0;
-
-	*string_p = string;
-}
-
-void strd_append(struct string_d* string_p, const char* text)
+static void append(struct string* string_p, const char* text)
 {
 	assert(string_p != NULL);
 	assert(text != NULL);
 
-	struct string_d string = *string_p;
+	struct string string = *string_p;
 	while (*text != '\0')
 	{
-		if (string.size - 1 <= string.length)
-		{
-			string.size *= 2;
-			string.content = realloc(string.content, string.size * sizeof(*string.content));
-			if (string.content == NULL)
-			{
-				abort();
-			}
+		if (string.size - 1 <= string.length) {
+			string.expand(&string);
 		}
 		string.content[string.length] = *text;
 		string.length += 1;
@@ -99,25 +41,141 @@ void strd_append(struct string_d* string_p, const char* text)
 	*string_p = string;
 }
 
-void strd_appends(struct string_d* string_p, struct string_d text)
-{
-	strd_append(string_p, strd_content(text));
+static void append_c(struct string* string_p, const char* text) {
+	(void) string_p;
+	(void) text;
+	assert(false);
 }
 
-void strd_clear(struct string_d* string_p)
+static void appendn(struct string* string_p, const char* text, int32_t count)
 {
-	struct string_d string = *string_p;
-	string.length = 0;
-	string.content[0] = '\0';
+	assert(string_p != NULL);
+	assert(text != NULL);
+
+	struct string string = *string_p;
+	for (int i = 0; i < count && *text != '\0'; i += 1)
+	{
+		if (string.size - 1 <= string.length) {
+					string.expand(&string);
+				}string.content[string.length] = *text;
+		string.length += 1;
+		text += 1;
+	}
+	string.content[string.length] = '\0';
+
 	*string_p = string;
 }
 
-int32_t strd_length(struct string_d string)
+static void appendn_c(struct string* string_p, const char* text, int32_t count) {
+	(void) string_p;
+	(void) text;
+	(void) count;
+	assert(false);
+}
+
+static void str_free_s(struct string* string_p) {
+	assert(false);
+	string_p->length = 0;
+}
+
+static void str_free_c(struct string* string_p) {
+	(void) string_p;
+	assert(false);
+}
+
+static void str_free_d(struct string* string_p) {
+	struct string string = *string_p;
+
+	free(string.content);
+	string.length = 0;
+	string.size = 0;
+
+	*string_p = string;
+}
+
+struct string str_init_s(char* buffer, int32_t size) {
+	assert(0 < size);
+	buffer[0] = '\0';
+	return (struct string)
+	{
+		.content = buffer,
+		.size = size,
+		.length = 0,
+		.append = append,
+		.appendn = appendn,
+		.expand = expand_s,
+		.free = str_free_s
+	};
+}
+
+struct string string_init()
 {
+	return str_init_ds(16);
+}
+
+struct string str_init_ds(int32_t size) {
+	assert(0 < size);
+
+	struct string string =
+	{
+		.content = malloc_a(size, sizeof(*string.content)),
+		.size = size,
+		.length = 0,
+		.append = append,
+		.appendn = appendn,
+		.expand = expand_d,
+		.free = str_free_d
+	};
+	string.content[0] = '\0';
+
+	return string;
+}
+
+struct string str_init_c(char* text) {
+	size_t text_len = strlen(text);
+	struct string string =
+	{
+		.content = text,
+		.size = text_len + 1,
+		.length = text_len,
+		.append = append_c,
+		.appendn = appendn_c,
+		.expand = expand_s,
+		.free = str_free_c
+	};
+
+	return string;
+}
+
+void str_free(struct string* string_p) {
+	string_p->free(string_p);
+}
+
+int32_t str_length(struct string string) {
 	return string.length;
 }
 
-char* strd_content(struct string_d string)
-{
+char* str_content(struct string string) {
 	return string.content;
+}
+
+void str_append(struct string* string, const char* content) {
+	string->append(string, content);
+}
+
+void str_appendn(struct string* string, const char* content, int32_t count) {
+	string->appendn(string, content, count);
+}
+
+void str_appends(struct string* string_p, struct string text)
+{
+	str_append(string_p, str_content(text));
+}
+
+void str_clear(struct string* string_p)
+{
+	struct string string = *string_p;
+	string.length = 0;
+	string.content[0] = '\0';
+	*string_p = string;
 }
