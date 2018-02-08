@@ -1,32 +1,28 @@
 # pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
-// String on a stack
-struct string_s
-{
+struct string {
 	char* content;
 	int32_t size;
 	int32_t length;
+	void (*append)(struct string* string, const char* content);
+	void (*appendn)(struct string* string, const char* content, int32_t count);
+	void (*expand)(struct string* string);
+	void (*free)(struct string* string);
 };
 
-// String on a heap
-struct string_d
-{
-	char* content;
-	int32_t size;
-	int32_t length;
-};
-
-struct string_s strs_init(char* string, int32_t size);
-void strs_append(struct string_s* string_p, const char* content);
-void strs_appendn(struct string_s* string_p, const char* content,
-                  int32_t count);
-
-struct string_d strd_mallocn(int32_t size);
-void strd_free(struct string_d* string_p);
-void strd_append(struct string_d* string_p, const char* text);
-void strd_appends(struct string_d* string_p, struct string_d text);
-void strd_clear(struct string_d* string_p);
-int32_t strd_length(struct string_d string);
-char* strd_content(struct string_d string);
+// string on a stack, meaning a fixed size
+struct string str_init_s(char* buffer, int32_t size);
+// string on a heap, meaning a dynamic size
+struct string string_init();
+struct string str_init_ds(int32_t size);
+struct string str_init_c(char* string);
+void str_free(struct string* string);
+int32_t str_length(struct string string);
+char* str_content(struct string string);
+void str_append(struct string* string, const char* content);
+void str_appendn(struct string* string, const char* content, int32_t count);
+void str_appends(struct string* string_p, struct string text);
+void str_clear(struct string* string_p);

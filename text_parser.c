@@ -1,24 +1,21 @@
+#include "text_parser.h"
+
+#include <assert.h>
+#include <ctype.h>
+#include <pcre.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <assert.h>
-#include <ctype.h>
 #include <string.h>
 
-#include <libxml/xmlstring.h>
-#include <pcre.h>
+#include "safe_string.h"
 
-#include "text_parser.h"
+VECTOR_DEFINE(, char*, section_references)
 
-static bool
-str_is_prefix_ci(const char* text, const char* prefix)
-{
-	while (*prefix != 0)
-	{
-		if (*text == 0 || tolower(*text) != tolower(*prefix))
-		{
+static bool str_is_prefix_ci(const char* text, const char* prefix) {
+	while (*prefix != 0) {
+		if (*text == 0 || tolower(*text) != tolower(*prefix)) {
 			return false;
 		}
 
@@ -29,31 +26,25 @@ str_is_prefix_ci(const char* text, const char* prefix)
 	return true;
 }
 
-static const char* parse_prefix(const char* char_p)
-{
+static const char* parse_prefix(const char* char_p) {
 	const char prefix[] = "section";
-	if (!str_is_prefix_ci(char_p, prefix))
-	{
+	if (!str_is_prefix_ci(char_p, prefix)) {
 		return NULL;
 	}
 	char_p += strlen(prefix);
 
-	if (tolower(*char_p) == 's')
-	{
+	if (tolower(*char_p) == 's') {
 		char_p++;
 	}
 
 	return char_p;
 }
 
-static const char* parse_spaces(const char* char_p)
-{
-	if (*char_p != ' ')
-	{
+static const char* parse_spaces(const char* char_p) {
+	if (*char_p != ' ') {
 		return NULL;
 	}
-	while (*char_p == ' ')
-	{
+	while (*char_p == ' ') {
 		char_p++;
 	}
 
@@ -64,21 +55,18 @@ static const char* parse_spaces(const char* char_p)
 // 0 means no error
 // 1 means the section reference was missing
 // 2 means that the text is something the parser doesn't recognize
-static int32_t parse_section_reference(char** result_p, const char** char_pp)
-{
+static int32_t parse_section_reference(struct string* result_p, const char** char_pp) {
 	const char* char_p = *char_pp;
 	bool reference_exists;
-	char* result = NULL;
-	if (isdigit(*char_p))
-	{
+	struct string result;
+	bool result_string_initialized = false;
+	if (isdigit(*char_p)) {
 		reference_exists = true;
 
 		char ref_buffer[10];
 		int32_t ref_buf_i = 0;
-		while (isdigit(*char_p))
-		{
-			if (ref_buf_i >= 10 - 1)
-			{
+		while (isdigit(*char_p)) {
+			if (ref_buf_i >= 10 - 1) {
 				abort();
 			}
 			ref_buffer[ref_buf_i] = *char_p;
@@ -86,8 +74,7 @@ static int32_t parse_section_reference(char** result_p, const char** char_pp)
 			ref_buf_i++;
 			char_p++;
 		}
-		while (*char_p >= 'A' && *char_p <= 'Z')
-		{
+		while (*char_p >= 'A' && *char_p <= 'Z') {
 			assert(ref_buf_i < 10 - 1);
 			ref_buffer[ref_buf_i] = *char_p;
 
@@ -96,193 +83,143 @@ static int32_t parse_section_reference(char** result_p, const char** char_pp)
 		}
 		ref_buffer[ref_buf_i] = 0;
 
-		result = malloc((ref_buf_i + 2) * sizeof(char const));
-		strcpy(result, ref_buffer);
-	}
-	else if (*char_p == '(')
-	{
+		result = str_init_ds(ref_buf_i + 2);
+		result_string_initialized = true;
+		str_append(&result, ref_buffer);
+	} else if (*char_p == '(') {
 		reference_exists = false;
-	}
-	else
-	{
+	} else {
 		goto error;
 	}
 
-	while (*char_p == '(')
-	{
+	while (*char_p == '(') {
 		char_p++;
-		if (isdigit(*char_p))
-		{
-			while (isdigit(*char_p))
-			{
+		if (isdigit(*char_p)) {
+			while (isdigit(*char_p)) {
 				char_p++;
 			}
 			int32_t failsafe = 0;
-			while (*char_p >= 'A' && *char_p <= 'Z')
-			{
+			while (*char_p >= 'A' && *char_p <= 'Z') {
 				assert(failsafe < 100);
 				char_p++;
 			}
-			if (*char_p != ')')
-			{
+			if (*char_p != ')') {
 				goto error;
 			}
-		}
-		else if (*(char_p + 1) == ')')
-		{
+		} else if (*(char_p + 1) == ')') {
 			char_p++;
-		}
-		else
-		{
+		} else {
 			goto error;
 		}
 		char_p++;
 	}
 
-	if (result != NULL)
-	{
+	if (result_string_initialized) {
 		*result_p = result;
 	}
 
 	*char_pp = char_p;
 
-	if (reference_exists)
-	{
+	if (reference_exists) {
 		return 0;
-	}
-	else
-	{
+	} else {
 		return 1;
 	}
+
 error:
-	if (result != NULL)
-	{
-		free(result);
+	if (result_string_initialized) {
+		str_free(&result);
 	}
 	return 2;
 }
 
 // doesn't handle cases:
 // section 119A(4) of the Enterprise Act 2002 (c. 40) (which applies to functions
-static struct section_references get_references_from_match(const char* text)
-{
-	struct section_references result = init_references();
+static struct section_references get_references_from_match(const char* text) {
+	struct section_references result = section_references_init();
 
 	const char* char_p = text;
 
 	char_p = parse_prefix(char_p);
-	if (char_p == NULL)
-	{
+	if (char_p == NULL) {
 		goto parse_end;
 	}
 
 	char_p = parse_spaces(char_p);
-	if (char_p == NULL)
-	{
+	if (char_p == NULL) {
 		goto parse_end;
 	}
 
-	char* reference;
+	struct string reference;
 	int32_t error = parse_section_reference(&reference, &char_p);
-	if (error > 0)
-	{
+	if (error > 0) {
 		goto parse_end;
 	}
-	add_reference(&result, reference);
+	section_references_append(&result, str_content(reference));
 
 	bool had_space;
-	while (true)
-	{
+	while (true) {
 		had_space = false;
-		if (*char_p == ' ')
-		{
+		if (*char_p == ' ') {
 			had_space = true;
-			while (*char_p == ' ')
-			{
+			while (*char_p == ' ') {
 				char_p++;
 			}
 		}
 
 		bool is_from_to = false;
-		if (*char_p == ',')
-		{
+		if (*char_p == ',') {
 			char_p++;
-			while (*char_p == ' ')
-			{
+			while (*char_p == ' ') {
 				char_p++;
 			}
-		}
-		else if (had_space)
-		{
-			if (str_is_prefix_ci(char_p, "and"))
-			{
+		} else if (had_space) {
+			if (str_is_prefix_ci(char_p, "and")) {
 				char_p += strlen("and");
-			}
-			else if (str_is_prefix_ci(char_p, "or"))
-			{
+			} else if (str_is_prefix_ci(char_p, "or")) {
 				char_p += strlen("or");
-			}
-			else if (str_is_prefix_ci(char_p, "to"))
-			{
+			} else if (str_is_prefix_ci(char_p, "to")) {
 				char_p += strlen("to");
 				is_from_to = true;
-			}
-			else
-			{
+			} else {
 				break;
 			}
 
 			char_p = parse_spaces(char_p);
-			if (char_p == NULL)
-			{
+			if (char_p == NULL) {
 				goto parse_end;
 			}
-		}
-		else
-		{
+		} else {
 			goto parse_end;
 		}
 
-		char const* const previous_reference = reference;
+		struct string previous_reference = reference;
 		error = parse_section_reference(&reference, &char_p);
-		if (error > 1)
-		{
+		if (error > 1) {
 			goto parse_end;
-		}
-		else if (error < 1)
-		{
+		} else if (error < 1) {
 			// what to with section 199A to 210?
-			if (is_from_to)
-			{
-				for (long int i = strtol(previous_reference, NULL, 10) + 1;
-				        i < strtol(reference, NULL, 10); i++)
-				{
-					char* i_string = malloc(10);
-					if (i_string == NULL)
-					{
-						abort();
-					}
-					int chars = snprintf(i_string, 10, "%ld", i);
-					if (chars <= 0)
-					{
+			if (is_from_to) {
+				for (long int i = strtol(str_content(previous_reference), NULL, 10) + 1;
+						i < strtol(str_content(reference), NULL, 10); i++) {
+					struct string i_string = string_init();
+					int chars = snprintf(str_content(i_string), 10, "%ld", i);
+					if (chars <= 0) {
 						abort();
 					}
 
-					add_reference(&result, i_string);
+					section_references_append(&result, str_content(i_string));
 				}
 			}
-			add_reference(&result, reference);
+			section_references_append(&result, str_content(reference));
 		}
 	}
 
-	if (had_space)
-	{
+	if (had_space) {
 		char const of_suffix[] = "of ";
-		if (str_is_prefix_ci(char_p, of_suffix))
-		{
+		if (str_is_prefix_ci(char_p, of_suffix)) {
 			char_p += strlen(of_suffix);
-			if (!str_is_prefix_ci(char_p, "this act"))
-			{
+			if (!str_is_prefix_ci(char_p, "this act")) {
 				goto ignore_references;
 			}
 		}
@@ -292,134 +229,57 @@ parse_end:
 	return result;
 
 ignore_references:
-	free_references(&result);
-	return init_references();
+	free_references_deep(&result);
+	return section_references_init();
 }
 
-static int32_t get_reference_count(struct section_references references)
-{
-	return references.elem_count;
-}
+void free_references_deep(struct section_references* references_p) {
+	struct section_references references = *references_p;
 
-static char* get_reference(struct section_references const references,
-                           int32_t index)
-{
-	return references.list[index];
-}
-
-static void free_references_shallow(struct section_references* array_p)
-{
-	struct section_references array = *array_p;
-
-	free(array.list);
-	array.list = NULL;
-	array.list_size = 0;
-	array.elem_count = 0;
-
-	*array_p = array;
-}
-
-struct section_references init_references()
-{
-	struct section_references result =
-	{
-		.list = malloc(1 * sizeof(char*)),
-		.list_size = 1,
-		.elem_count = 0
-	};
-	if (result.list == NULL)
-	{
-		abort();
+	for (int32_t i = 0; i < section_references_length(references); i++) {
+		free(section_references_get(references, i));
 	}
 
-	return result;
+	section_references_free(&references);
+
+	*references_p = references;
 }
 
-void free_references(struct section_references* array_p)
-{
-	struct section_references array = *array_p;
-
-	for (int32_t i = 0; i < get_reference_count(array); i++)
-	{
-		free(get_reference(array, i));
-	}
-
-	free_references_shallow(&array);
-
-	*array_p = array;
-}
-
-void add_reference(struct section_references* array_p, char* const element)
-{
-	struct section_references array = *array_p;
-
-	if (array.list_size <= array.elem_count)
-	{
-		array.list_size *= 2;
-		array.list = realloc(array.list, array.list_size * sizeof(char*));
-		if (array.list == NULL)
-		{
-			abort();
-		}
-	}
-	array.list[array.elem_count] = element;
-	array.elem_count++;
-
-	*array_p = array;
-}
-
-void remove_reference(struct section_references* array_p, int32_t index)
-{
-	struct section_references array = *array_p;
-	assert(array.elem_count > 0);
-	for (; index < array.elem_count - 1; index++)
-	{
-		array.list[index] = array.list[index + 1];
-	}
-	array.elem_count -= 1;
-	*array_p = array;
-}
-
-struct section_references get_references_from_text(const char* text)
-{
-	struct section_references result = init_references();
+struct section_references get_references_from_text(const char* text) {
+	struct section_references result = section_references_init();
 
 	const char* error_message;
 	int error_offset;
-	pcre* regex = pcre_compile("sections?+ ++\\d++", PCRE_CASELESS, &error_message,
-	                           &error_offset, NULL);
-	if (regex == NULL)
-	{
+	pcre* regex = pcre_compile("sections?+ ++\\d++", PCRE_CASELESS,
+			&error_message, &error_offset, NULL);
+	if (regex == NULL) {
 		abort();
 	}
 
-	enum { ovector_size = 30 };
+	int32_t ovector_size = 30;
 	int ovector[30];
 	int text_len = strlen(text);
 	int matches = pcre_exec(regex, NULL, text, text_len, 0, 0, ovector,
-	                        ovector_size);
-	while (matches > 0)
-	{
+			ovector_size);
+	while (matches > 0) {
 		// char buffer[80];
 		// strncpy(buffer, text + ovector[0], 79);
 		// buffer[79] = 0;
 		// fprintf(stderr, "%s\n", buffer);
 		struct section_references refs_from_match = get_references_from_match(
-		            text + ovector[0]);
-		for (int i = 0; i < refs_from_match.elem_count; i++)
-		{
-			char* const reference = refs_from_match.list[i];
-			add_reference(&result, reference);
+				text + ovector[0]);
+		for (int i = 0; i < section_references_length(refs_from_match); i++) {
+			char* const reference = section_references_get(refs_from_match, i);
+			section_references_append(&result, reference);
 			// fprintf(stderr, "%ld ", reference);
 		}
-		free_references_shallow(&refs_from_match);
+		section_references_free(&refs_from_match);
 		// fprintf(stderr, "\n");
 
 		matches = pcre_exec(regex, NULL, text, text_len, ovector[1], 0, ovector,
-		                    ovector_size);
+				ovector_size);
 	}
-	if (matches != -1)
-	{
+	if (matches != -1) {
 		// fprintf(stderr, "match error: %d\n", matches);
 		abort();
 	}

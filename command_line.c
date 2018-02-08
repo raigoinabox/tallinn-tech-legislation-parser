@@ -242,7 +242,7 @@ static bool print_option_help(struct option_parameter option)
 	int help_text_len = strlen(option.help_text);
 	int32_t text_read = 0;
 	char split_text_buf[help_text_len * 2 + 10];
-	struct string_s split_text = strs_init(split_text_buf, sizeof(split_text_buf));
+	struct string split_text = str_init_s(split_text_buf, sizeof(split_text_buf));
 	while (text_read < help_text_len)
 	{
 		int32_t line_length = 0;
@@ -259,7 +259,7 @@ static bool print_option_help(struct option_parameter option)
 				break;
 			}
 
-			strs_appendn(&split_text, option.help_text + text_read, chars_to_space);
+			str_appendn(&split_text, option.help_text + text_read, chars_to_space);
 			line_length += chars_to_space;
 			text_read += chars_to_space;
 		}
@@ -268,7 +268,7 @@ static bool print_option_help(struct option_parameter option)
 			break;
 		}
 
-		strs_append(&split_text, "\n                    ");
+		str_append(&split_text, "\n                    ");
 		text_read += 1;
 	}
 
@@ -310,7 +310,7 @@ bool print_help(const char* program_name)
 	return true;
 }
 
-bool parse_args(struct print_args* result, int argc, char const* argv[])
+bool parse_print_args(struct print_args* result, int argc, char const* argv[], int32_t offset)
 {
 	assert(result != NULL);
 
@@ -319,7 +319,7 @@ bool parse_args(struct print_args* result, int argc, char const* argv[])
 	bool keep_parsing_options = true;
 	struct option_parameter option = {0};
 	const char* option_argument;
-	for (int32_t i = 1; i < argc; i++)
+	for (int32_t i = 1 + offset; i < argc; i++)
 	{
 		const char* argument = argv[i];
 		if (!is_null_option(option) && option.argument_name != NULL

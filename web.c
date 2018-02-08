@@ -99,16 +99,16 @@ cleanup_1:
 	abort();
 }
 
-void legislation_free(struct legislation* legislation_p)
+void legislation_free(struct leg_id* legislation_p)
 {
-	struct legislation legislation = *legislation_p;
-	strd_free(&legislation.type);
-	strd_free(&legislation.year);
-	strd_free(&legislation.number);
+	struct leg_id legislation = *legislation_p;
+	str_free(&legislation.type);
+	str_free(&legislation.year);
+	str_free(&legislation.number);
 	*legislation_p = legislation;
 }
 
-bool parse_url(struct legislation* result, const char* url)
+bool parse_url(struct leg_id* result, const char* url)
 {
 	char url_buffer[strlen(url) + 1];
 	strcpy(url_buffer, url);
@@ -119,7 +119,7 @@ bool parse_url(struct legislation* result, const char* url)
 	}
 	strtok(domain, "/");
 
-	struct legislation legislation;
+	struct leg_id legislation;
 	char* type = strtok(NULL, "/");
 	if (type == NULL)
 	{
@@ -136,32 +136,32 @@ bool parse_url(struct legislation* result, const char* url)
 		return false;
 	}
 
-	legislation.type = strd_mallocn(strlen(type) + 10);
-	strd_append(&legislation.type, type);
+	legislation.type = str_init_ds(strlen(type) + 10);
+	str_append(&legislation.type, type);
 
-	legislation.year = strd_mallocn(strlen(year) + 10);
-	strd_append(&legislation.year, year);
+	legislation.year = str_init_ds(strlen(year) + 10);
+	str_append(&legislation.year, year);
 
-	legislation.number = strd_mallocn(strlen(number) + 10);
-	strd_append(&legislation.number, number);
+	legislation.number = str_init_ds(strlen(number) + 10);
+	str_append(&legislation.number, number);
 
 	*result = legislation;
 
 	return true;
 }
 
-struct string_d get_api_url(struct legislation legislation)
+struct string get_api_url(struct leg_id legislation)
 {
-	struct string_d normalized = strd_mallocn(strd_length(legislation.type) +
-	                             strd_length(legislation.year) + strd_length(
-	                                 legislation.number) + 128);
-	strd_append(&normalized, "http://www.legislation.gov.uk/");
-	strd_append(&normalized, strd_content(legislation.type));
-	strd_append(&normalized, "/");
-	strd_append(&normalized, strd_content(legislation.year));
-	strd_append(&normalized, "/");
-	strd_append(&normalized, strd_content(legislation.number));
-	strd_append(&normalized, "/data.xml");
+	struct string normalized = str_init_ds(str_length(legislation.type) +
+			str_length(legislation.year) + str_length(
+					legislation.number) + 128);
+	str_append(&normalized, "http://www.legislation.gov.uk/");
+	str_appends(&normalized, legislation.type);
+	str_append(&normalized, "/");
+	str_appends(&normalized, legislation.year);
+	str_append(&normalized, "/");
+	str_appends(&normalized, legislation.number);
+	str_append(&normalized, "/data.xml");
 
 	return normalized;
 }
@@ -180,6 +180,7 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
 	return_code = sqlite3_prepare_v2(db_conn, sql, -1, &statement, NULL);
 	if (return_code != SQLITE_OK)
 	{
+		fprintf_a(stderr, "sqlite3 error: %s\n", sqlite3_errmsg(db_conn));
 		abort();
 	}
 	return_code = sqlite3_bind_text(statement, 1, url, -1, SQLITE_STATIC);
@@ -233,6 +234,11 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
 		}
 		return_code = sqlite3_step(statement);
 		assert(return_code == SQLITE_DONE);
+		return_code = sqlite3_finalize(statement);
+		if (return_code != SQLITE_OK)
+		{
+			abort();
+		}
 	}
 
 	return_code = sqlite3_close_v2(db_conn);

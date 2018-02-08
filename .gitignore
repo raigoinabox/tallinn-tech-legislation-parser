@@ -5,3 +5,11 @@ tags
 core
 cache.db
 build
+/Debug/
+/Release/
+/Profiling/
+callgrind.out.*
+.cproject
+.project
+.settings
+makefile.targets
