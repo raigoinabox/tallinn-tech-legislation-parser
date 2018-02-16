@@ -161,6 +161,10 @@ struct string get_api_url(struct leg_id legislation)
 	str_appends(&normalized, legislation.year);
 	str_append(&normalized, "/");
 	str_appends(&normalized, legislation.number);
+	if (str_length(legislation.version_date) == 10) {
+		str_append(&normalized, "/");
+		str_appends(&normalized, legislation.version_date);
+	}
 	str_append(&normalized, "/data.xml");
 
 	return normalized;

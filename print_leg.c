@@ -125,7 +125,7 @@ bool print_leg(int argc, const char* argv[], int offset) {
 	}
 
 	if (args.print_help) {
-		print_help(argv[0]);
+		print_print_help(argv[0]);
 	} else {
 		struct run_info run_info;
 		if (!process_args(&run_info, args)) {

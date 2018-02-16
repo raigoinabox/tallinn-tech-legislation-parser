@@ -11,6 +11,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define VECTOR_STRUCT(type, name) \
+		struct name { type* content, size_t vector_size, size_t vector_length };
+
 #define VECTOR_DECLARE(modifier, type, name) \
 	struct name { \
 		struct vector parent; \

@@ -4,7 +4,6 @@ graph.dot
 tags
 core
 cache.db
-build
 /Debug/
 /Release/
 /Profiling/
@@ -13,3 +12,4 @@ callgrind.out.*
 .project
 .settings
 makefile.targets
+meson-build

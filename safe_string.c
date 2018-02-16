@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "util.h"
 
@@ -108,7 +109,7 @@ struct string str_init_s(char* buffer, int32_t size) {
 	};
 }
 
-struct string string_init()
+struct string str_init()
 {
 	return str_init_ds(16);
 }
@@ -172,10 +173,39 @@ void str_appends(struct string* string_p, struct string text)
 	str_append(string_p, str_content(text));
 }
 
+bool str_append_char(struct string* string_p, char character) {
+	if (character == '\0') {
+		return false;
+	}
+	char text[10];
+	sprintf(text, "%c", character);
+	str_append(string_p, text);
+	return true;
+}
+
+void str_appendf(struct string* string_p, const char* template, ...) {
+	va_list args, args_copy;
+	va_start(args, template);
+	va_copy(args_copy, args);
+
+	int bytes_needed = vsnprintf(NULL, 0, template, args_copy);
+	char text[bytes_needed + 10];
+	vsprintf(text, template, args);
+	str_append(string_p, text);
+
+	va_end(args_copy);
+	va_end(args);
+}
+
 void str_clear(struct string* string_p)
 {
 	struct string string = *string_p;
 	string.length = 0;
 	string.content[0] = '\0';
 	*string_p = string;
+}
+
+bool string_is_empty(struct string string)
+{
+	return str_length(string) == 0;
 }

@@ -12,10 +12,9 @@
 #include <libxml/globals.h>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
-#include <libxml/xmlreader.h>
 #include <libxml/xmlstring.h>
+#include <stdarg.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,13 +66,6 @@ struct SAX_state {
 	struct string section_text;
 };
 
-static void sax_start_document(void* user_data)
-{
-	struct SAX_state* state_p = user_data;
-	state_p->result = sections_init();
-	state_p->section_depth = 0;
-}
-
 static void sax_start_element(void* user_data, const xmlChar* name,
 		const xmlChar** attributes)
 {
@@ -102,7 +94,7 @@ static void sax_start_element(void* user_data, const xmlChar* name,
 			section_number[0] = '\0';
 			state.section_number = xmlStrcat(section_number, id + prefix_length);
 			state.section_depth = 1;
-			state.section_text = string_init();
+			state.section_text = str_init();
 			goto end;
 		}
 	}
@@ -147,73 +139,60 @@ static void sax_characters(void* user_data, const xmlChar* text, int len)
 	*state_p = state;
 }
 
-static xmlSAXHandler sax = {
-		.startDocument = sax_start_document,
-		.startElement = sax_start_element,
-		.endElement = sax_end_element,
-		.characters = sax_characters
-};
+static void sax_warning(void *user_data, const char *msg, ...) {
+	(void) user_data;
+    va_list args;
 
-static bool process_node(struct section* result, xmlTextReaderPtr xmlReader)
-{
-	xmlChar* id = xmlTextReaderGetAttribute(xmlReader, (xmlChar*) "id");
-	const size_t prefix_length = strlen("section-");
-	if (id == NULL
-			|| xmlStrncmp(id, (xmlChar*) "section-", prefix_length) != 0) {
-		return false;
-	}
-
-	xmlChar* section_number = malloc_a((xmlStrlen(id) + 1 - prefix_length),
-			sizeof(xmlChar));
-	section_number[0] = '\0';
-	section_number = xmlStrcat(section_number, id + prefix_length);
-
-	xmlNodePtr node = xmlTextReaderExpand(xmlReader);
-	xmlChar* node_text_w_three_dots = xmlNodeGetContent(node);
-	xmlChar* node_text = filter_triple_dots(node_text_w_three_dots);
-	xmlFree(node_text_w_three_dots);
-
-	struct section_references references = get_references_from_text(
-			(char*) node_text);
-	xmlFree(node_text);
-
-	struct section section = { .id = (char*) section_number, .references =
-			references };
-	*result = section;
-	return true;
+    va_start(args, msg);
+    fprintf_a(stderr, "sax_warning: ");
+    vfprintf(stderr, msg, args);
+    va_end(args);
 }
 
-static struct sections get_sections_from_page(struct page page,
-		struct string url) {
-	struct SAX_state sax_state;
-	if (false) {
-		if (xmlSAXUserParseMemory(&sax, &sax_state, page.contents, page.contents_size) != 0) {
-			abort();
-		}
-		return sax_state.result;
-	} else {
-		struct sections sections = sections_init();
-		xmlTextReaderPtr xmlReader = xmlReaderForMemory(page.contents,
-				page.contents_size, str_content(url), NULL, 0);
-		if (xmlReader == NULL) {
-			abort();
-		}
-		int result = xmlTextReaderRead(xmlReader);
-		while (result == 1) {
-			struct section section;
-			if (process_node(&section, xmlReader)) {
-				sections_append(&sections, section);
-				result = xmlTextReaderNext(xmlReader);
-			} else {
-				result = xmlTextReaderRead(xmlReader);
-			}
-		}
-		xmlFreeTextReader(xmlReader);
-		if (result != 0) {
-			abort();
-		}
-		return sections;
+static void sax_error(void *user_data, const char *msg, ...) {
+	(void) user_data;
+	(void) msg;
+//    va_list args;
+
+//    va_start(args, msg);
+//    fprintf_a(stderr, "sax_error: ");
+//    vfprintf(stderr, msg, args);
+//    va_end(args);
+}
+
+static void sax_fatal_error(void *user_data, const char *msg, ...) {
+	(void) user_data;
+    va_list args;
+
+    va_start(args, msg);
+    fprintf_a(stderr, "sax_fatal_error: ");
+    vfprintf(stderr, msg, args);
+    va_end(args);
+}
+
+static xmlSAXHandler sax = {
+		.startElement = sax_start_element,
+		.endElement = sax_end_element,
+		.characters = sax_characters,
+		.warning = sax_warning,
+		.error = sax_error,
+		.fatalError = sax_fatal_error
+};
+
+static bool get_sections_from_page(struct sections* result, struct page page)
+{
+	struct SAX_state sax_state = {
+			.result = sections_init(),
+			.section_depth = 0
+	};
+
+	if (xmlSAXUserParseMemory(&sax, &sax_state, page.contents,
+			page.contents_size) != 0) {
+		sections_free(&sax_state.result);
+		return false;
 	}
+	*result = sax_state.result;
+	return true;
 }
 
 bool get_sections_from_legislation(struct sections* result,
@@ -225,17 +204,18 @@ bool get_sections_from_legislation(struct sections* result,
 	char curl_error_string[CURL_ERROR_SIZE];
 	struct page page = get_web_page(str_content(url), &curl_error,
 			curl_error_string);
+	bool success = true;
 	if (curl_error != CURLE_OK) {
+		success = false;
 		assert(strlen(curl_error_string) > 0);
 		fprintf(stderr, "%s\n", curl_error_string);
-		free(page.contents);
-		str_free(&url);
-		return false;
+		goto end;
 	}
 
-	*result = get_sections_from_page(page, url);
+	success = get_sections_from_page(result, page);
 
+end:
 	free(page.contents);
 	str_free(&url);
-	return true;
+	return success;
 }

@@ -202,7 +202,7 @@ static struct section_references get_references_from_match(const char* text) {
 			if (is_from_to) {
 				for (long int i = strtol(str_content(previous_reference), NULL, 10) + 1;
 						i < strtol(str_content(reference), NULL, 10); i++) {
-					struct string i_string = string_init();
+					struct string i_string = str_init();
 					int chars = snprintf(str_content(i_string), 10, "%ld", i);
 					if (chars <= 0) {
 						abort();
