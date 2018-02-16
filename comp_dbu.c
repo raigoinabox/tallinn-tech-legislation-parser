@@ -46,7 +46,7 @@ static bool get_legislation_complexity(int32_t* result, struct leg_id legislatio
 	struct sections sections;
 	if (!get_sections_from_legislation(&sections, legislation))
 	{
-		fprintf_a(stderr, "get_sections_from_legislation failed. \n");
+//		fprintf_a(stderr, "get_sections_from_legislation failed. \n");
 		return false;
 	}
 	remove_foreign_sections(sections);
@@ -69,7 +69,7 @@ static bool get_legislation_complexity(int32_t* result, struct leg_id legislatio
 }
 
 static struct leg_complex_list get_norm_leg_complexities(
-		struct law_category_list law_categories)
+		struct law_category_list law_categories, struct string date)
 {
 	struct leg_complex_list leg_complex_list = leg_complex_list_init();
 	for (int i = 0; i < law_category_list_length(law_categories); i++)
@@ -80,6 +80,7 @@ static struct leg_complex_list get_norm_leg_complexities(
 		for (int j = 0; j < law_list_length(law_category.laws); j++)
 				{
 			struct leg_id leg_id = law_list_get(law_category.laws, j);
+			leg_id.version_date = date;
 			int32_t complexity;
 			bool success = get_legislation_complexity(&complexity, leg_id);
 			if (success) {
@@ -126,15 +127,10 @@ static struct leg_complex_list get_norm_leg_complexities(
 	return leg_complex_list;
 }
 
-bool comp_dbu(int argc, const char* argv[], int32_t offset) {
-	(void) argc;
-	(void) argv;
-	(void) offset;
-
-	dbu_init();
-	const struct law_category_list law_categories = get_law_categories();
+static void print_norm_category_complexities(const struct law_category_list law_categories,
+		struct string date) {
 	struct leg_complex_list leg_complex_list = get_norm_leg_complexities(
-			law_categories);
+			law_categories, date);
 	struct cat_compl_list cat_compl_list = cat_compl_list_init(strcmp);
 	for (int i = 0; i < leg_complex_list_length(leg_complex_list); i++)
 	{
@@ -165,13 +161,32 @@ bool comp_dbu(int argc, const char* argv[], int32_t offset) {
 	iterator = cat_compl_list_iterator(cat_compl_list);
 	while (cat_compl_list_iterator_has_next(iterator)) {
 		cat_compl_list_iterator_next(&iterator);
-		printf_a("Hello %s %d %d\n", cat_compl_list_iterator_get_key(iterator),
-				cat_compl_list_iterator_get_value(iterator).complexity_total,
-				cat_compl_list_iterator_get_value(iterator).legislation_count);
+		printf_a("%s %d\n", cat_compl_list_iterator_get_key(iterator),
+				cat_compl_list_iterator_get_value(iterator).complexity_total);
 	}
 
 	leg_complex_list_free(&leg_complex_list);
 	cat_compl_list_free(&cat_compl_list);
+}
 
-	return false;
+bool comp_dbu(int argc, const char* argv[], int32_t offset) {
+	(void) argc;
+	(void) argv;
+	(void) offset;
+
+	dbu_init();
+
+	for (int i = 2004; i <= 2018; i++) {
+		char buffer[20];
+		sprintf(buffer, "%d-%02d-%02d", i, 1, 1);
+
+		struct string date = str_init();
+		str_append(&date, buffer);
+		printf("%s\n", str_content(date));
+		const struct law_category_list law_categories = get_english_law_categories();
+		print_norm_category_complexities(law_categories, date);
+		str_free(&date);
+	}
+
+	return true;
 }

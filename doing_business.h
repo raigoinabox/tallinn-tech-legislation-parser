@@ -64,4 +64,5 @@ static const struct dbu_year doing_business_data[] = {
 };
 
 void dbu_init();
-struct law_category_list get_law_categories();
+struct law_category_list get_english_law_categories();
+bool get_dtf_by_name(double* result, const char* name);

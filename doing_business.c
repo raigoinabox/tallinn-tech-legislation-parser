@@ -7,10 +7,8 @@
 
 #include "doing_business.h"
 
-#include <stdlib.h>
+#include <string.h>
 
-#include "legislation.h"
-#include "vectors.h"
 
 VECTOR_DEFINE(, struct leg_id, law_list)
 VECTOR_DEFINE(, struct dbu_law_category, law_category_list)
@@ -50,7 +48,8 @@ static struct string_list get_bankruptcy_and_collateral_laws_categories()
 {
 	struct string_list categories = string_list_init();
 	string_list_append(&categories, "Closing a Business");
-	string_list_append(&categories, "Getting Credit - Legal Rights");
+//	string_list_append(&categories, "Getting Credit - Legal Rights");
+	string_list_append(&categories, "Getting Credit");
 	return categories;
 }
 
@@ -412,6 +411,39 @@ void dbu_init() {
 	law_category_list_append(&law_categories, law_category);
 }
 
-struct law_category_list get_law_categories() {
+struct law_category_list get_english_law_categories() {
 	return law_categories;
+}
+
+bool get_dtf_by_name(double* result, const char* name)
+{
+/*
+ * Closing a Business -  skipped
+ * Employing Workers - skipped
+ */
+	double _result = -1;
+	if (strcmp(name, "Getting Credit") == 0) {
+		_result = doing_business_data[0].getting_credit;
+	} else if (strcmp(name, "Protecting Investors") == 0) {
+		_result = doing_business_data[0].protecting_minority_investors;
+	} else if (strcmp(name, "Enforcing Contracts") == 0) {
+		_result = doing_business_data[0].enforcing_contracts;
+	} else if (strcmp(name, "Starting a Business") == 0) {
+		_result = doing_business_data[0].starting_a_business;
+	} else if (strcmp(name, "Dealing with Licenses") == 0) {
+		_result = doing_business_data[0].dealing_with_construction_permits;
+	} else if (strcmp(name, "Registering Property") == 0) {
+		_result = doing_business_data[0].registering_property;
+	} else if (strcmp(name, "Paying Taxes") == 0) {
+		_result = doing_business_data[0].paying_taxes;
+	} else if (strcmp(name, "Trading Across Borders") == 0) {
+		_result = doing_business_data[0].trading_across_borders;
+	}
+
+	if (_result < 0) {
+		return false;
+	} else {
+		*result = _result;
+		return true;
+	}
 }
