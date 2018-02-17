@@ -18,7 +18,7 @@ struct string str_init_s(char* buffer, int32_t size);
 // string on a heap, meaning a dynamic size
 struct string str_init();
 struct string str_init_ds(int32_t size);
-struct string str_init_c(char* string);
+struct string str_init_c(const char* string);
 void str_free(struct string* string);
 int32_t str_length(struct string string);
 char* str_content(struct string string);
