@@ -132,11 +132,11 @@ struct string str_init_ds(int32_t size) {
 	return string;
 }
 
-struct string str_init_c(char* text) {
+struct string str_init_c(const char* text) {
 	size_t text_len = strlen(text);
 	struct string string =
 	{
-		.content = text,
+		.content = (char*) text,
 		.size = text_len + 1,
 		.length = text_len,
 		.append = append_c,

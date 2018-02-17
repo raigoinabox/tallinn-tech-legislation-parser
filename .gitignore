@@ -3,7 +3,8 @@ graph.dot
 .*.swp
 tags
 core
-cache.db
+data.db
+data.db.bak
 /Debug/
 /Release/
 /Profiling/
@@ -13,3 +14,4 @@ callgrind.out.*
 .settings
 makefile.targets
 meson-build
+.Rproj.user
