@@ -37,10 +37,10 @@ int printf_a(const char* template, ...) {
 	return bytes_printed;
 }
 
-int fprintf_a(FILE* file, const char* template, ...) {
+int printf_ea(const char* template, ...) {
 	va_list args;
 	va_start(args, template);
-	int bytes_printed = vfprintf(file, template, args);
+	int bytes_printed = vfprintf(stderr, template, args);
 	va_end(args);
 	if (bytes_printed < 0) {
 		perror("vfprintf");

@@ -183,7 +183,7 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 	while (cat_compl_list_iterator_has_next(iterator)) {
 		cat_compl_list_iterator_next(&iterator);
 		struct complexity_result_dto result =
-				{ .country = str_init_c("eng"), .year = year, .dbu_category =
+				{ .country = str_init_c("GB"), .year = year, .dbu_category =
 						str_init_c(cat_compl_list_iterator_get_key(iterator)),
 						.complexity = cat_compl_list_iterator_get_value(
 								iterator).complexity_total };

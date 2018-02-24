@@ -323,7 +323,7 @@ static struct law_list get_tax_laws()
 static struct string_list get_trade_law_categories()
 {
 	struct string_list categories = string_list_init();
-	string_list_append(&categories, "Trading Across Borders");
+	string_list_append(&categories, "Trading across Borders");
 	return categories;
 }
 
@@ -436,7 +436,7 @@ bool get_dtf_by_name(double* result, const char* name)
 		_result = doing_business_data[0].registering_property;
 	} else if (strcmp(name, "Paying Taxes") == 0) {
 		_result = doing_business_data[0].paying_taxes;
-	} else if (strcmp(name, "Trading Across Borders") == 0) {
+	} else if (strcmp(name, "Trading across Borders") == 0) {
 		_result = doing_business_data[0].trading_across_borders;
 	}
 
