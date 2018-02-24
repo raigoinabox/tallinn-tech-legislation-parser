@@ -11,17 +11,11 @@
 #include "util.h"
 #include "safe_string.h"
 #include "vectors.h"
+#include "arg_parsing.h"
 
 struct global_args {
 	bool print_help;
-};
-
-struct global_option {
-	char short_form;
-	const char* long_form;
-	const char* help_text;
-	const char* argument_name;
-	void (*set_option)(void* args_p, const char* argument);
+	const char* command;
 };
 
 struct command {
@@ -31,11 +25,9 @@ struct command {
 
 VECTOR_DECLARE(static, struct command, command_vec)
 VECTOR_DEFINE(static, struct command, command_vec)
-VECTOR_DECLARE(static, struct global_option, global_option_vec)
-VECTOR_DEFINE(static, struct global_option, global_option_vec)
 
 static struct command_vec commands;
-static struct global_option_vec global_options;
+static struct arp_option_vec global_options;
 
 static void set_global_help_option(void* args_p, const char* argument) {
 	(void) argument;
@@ -84,18 +76,11 @@ static const struct option_parameter print_options[] =
 										" The possible formats are the same"
 										" as for graphviz: http://www.graphviz.org/doc/info/output.html.",
 						.argument_name = "FORMAT", .set_option_data =
-								set_format_data },
-				{ .short_form = 'g', .long_form = "debug", .help_text =
-						"Debug mode. Shows false-positives.", .argument_name =
+								set_format_data }, { .short_form = 'g',
+						.long_form = "debug", .help_text =
+								"Debug mode. Shows false-positives.",
+						.argument_name =
 						NULL, .set_option_data = set_debug_data }, { 0 } };
-
-static void print_err_a(const char* format, ...) {
-	va_list this_va_list;
-	va_start(this_va_list, format);
-	if (vfprintf(stderr, format, this_va_list) < 0) {
-		abort();
-	}
-}
 
 static int32_t find_space(const char* string) {
 	int32_t space_idx = 0;
@@ -182,7 +167,11 @@ static bool print_option_help(struct option_parameter option) {
 	return true;
 }
 
-bool parse_long_option(struct option_parameter* result,
+static bool is_null_option(struct option_parameter option) {
+	return option.short_form == '\0';
+}
+
+static bool parse_long_option(struct option_parameter* result,
 		const char** option_argument, const char* argument) {
 	for (int32_t option_index = 0;; option_index++) {
 		struct option_parameter option = print_options[option_index];
@@ -204,15 +193,15 @@ bool parse_long_option(struct option_parameter* result,
 		}
 	}
 
-	print_err_a("Unkown option %s\n", argument);
+	printf_ea("Unkown option %s\n", argument);
 	return false;
 }
 
-const char* begin_parse_short_options(const char* argument) {
+static const char* begin_parse_short_options(const char* argument) {
 	return argument + 1;
 }
 
-bool parse_next_short_option(struct option_parameter* result,
+static bool parse_next_short_option(struct option_parameter* result,
 		const char** option_argument, const char** iterator) {
 	char option_key = **iterator;
 	if (option_key == '\0') {
@@ -225,7 +214,7 @@ bool parse_next_short_option(struct option_parameter* result,
 	for (int32_t option_index = 0;; option_index++) {
 		option = print_options[option_index];
 		if (is_null_option(option)) {
-			print_err_a("Unknown option -%c\n", option.short_form);
+			printf_ea("Unknown option -%c\n", option.short_form);
 			return false;
 		}
 
@@ -260,15 +249,11 @@ void mod_init_command_line() {
 			"Compare my parser results with those of Doing Business report.";
 	command_vec_append(&commands, command);
 
-	global_options = global_option_vec_init();
-	struct global_option global_option = { .short_form = 'h', .long_form =
-			"help", .help_text = "Print this help message.", .argument_name =
+	global_options = arp_option_vec_init();
+	struct arp_option global_option = { .short_form = 'h', .long_form = "help",
+			.help_text = "Print this help message.", .argument_name =
 			NULL, .set_option = set_global_help_option };
-	global_option_vec_append(&global_options, global_option);
-}
-
-bool is_null_option(struct option_parameter option) {
-	return option.short_form == '\0';
+	arp_option_vec_append(&global_options, global_option);
 }
 
 bool print_help(const char* program_name) {
@@ -312,65 +297,27 @@ bool print_print_help(const char* program_name) {
 	return true;
 }
 
-bool parse_global_args(struct print_args* result, int argc, char const* argv[],
-		int32_t offset) {
+static bool parse_global_args(struct global_args* result, int argc,
+		char const* argv[]) {
 	assert(result != NULL);
 
-	int32_t argument_count = 0;
-	struct print_args args = { 0 };
-	bool keep_parsing_options = true;
-	struct option_parameter option = { 0 };
-	const char* option_argument;
-	for (int32_t i = 1 + offset; i < argc; i++) {
-		const char* argument = argv[i];
-		if (!is_null_option(option) && option.argument_name != NULL
-				&& *option_argument == '\0') {
-			option_argument = argument;
-		} else if (argument[0] != '-' || !keep_parsing_options
-				|| argument[1] == '\0') {
-			argument_count++;
-			if (argument_count == 1) {
-				args.url = argv[i];
-			} else {
-				goto error;
-			}
-		} else if (argument[1] != '-') {
-			const char* iter_buffer = begin_parse_short_options(argument);
-			bool success = parse_next_short_option(&option, &option_argument,
-					&iter_buffer);
-			while (success && !is_null_option(option)
-					&& option.argument_name == NULL) {
-				args = option.set_option_data(args, "");
-				success = parse_next_short_option(&option, &option_argument,
-						&iter_buffer);
-			}
-
-			if (!success) {
-				goto error;
-			}
-		} else if (argument[2] == '\0') {
-			keep_parsing_options = false;
-		} else if (!parse_long_option(&option, &option_argument, argument)) {
-			goto error;
+	struct arp_iterator iterator = get_arg_parsing_iterator(argc, argv, 0,
+			global_options);
+	while (arp_next(&iterator)) {
+		if (!arp_has(iterator)) {
+			return true;
 		}
-
-		if (!is_null_option(option)
-				&& (option.argument_name == NULL || *option_argument != '\0')) {
-			args = option.set_option_data(args, option_argument);
-			option = (struct option_parameter )
-					{ 0 };
-			option_argument = "";
+		if (arp_has_option(iterator)) {
+			struct arp_option option = arp_get_option(iterator);
+			option.set_option(result, arp_get_option_arg(iterator));
+		} else if (arp_get_arg_count(iterator) == 1) {
+			result->command = arp_get_arg(iterator);
+		} else {
+//			printf_ea("")
+//			break;
 		}
 	}
 
-	if (argument_count < 1 && !args.print_help) {
-		goto error;
-	}
-
-	*result = args;
-	return true;
-
-	error: print_print_help(argv[0]);
 	return false;
 }
 

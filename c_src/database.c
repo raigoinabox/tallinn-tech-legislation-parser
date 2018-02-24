@@ -9,8 +9,8 @@
 
 #include <stdlib.h>
 
-#include "safe_string.h"
 #include "util.h"
+
 
 sqlite3* db_open_conn() {
 	sqlite3* db_conn;
@@ -32,7 +32,7 @@ sqlite3_stmt* db_prepare_stmt(sqlite3* db_conn, const char* sql) {
 	sqlite3_stmt* statement;
 	int return_code = sqlite3_prepare_v2(db_conn, sql, -1, &statement, NULL);
 	if (return_code != SQLITE_OK) {
-		fprintf_a(stderr, "sqlite3 error: %s\n", sqlite3_errmsg(db_conn));
+		printf_ea("sqlite3 error: %s\n", sqlite3_errmsg(db_conn));
 		abort();
 	}
 	return statement;

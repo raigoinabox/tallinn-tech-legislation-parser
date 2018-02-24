@@ -144,7 +144,7 @@ static void sax_warning(void *user_data, const char *msg, ...) {
     va_list args;
 
     va_start(args, msg);
-    fprintf_a(stderr, "sax_warning: ");
+    printf_ea("sax_warning: ");
     vfprintf(stderr, msg, args);
     va_end(args);
 }
@@ -165,7 +165,7 @@ static void sax_fatal_error(void *user_data, const char *msg, ...) {
     va_list args;
 
     va_start(args, msg);
-    fprintf_a(stderr, "sax_fatal_error: ");
+    printf_ea("sax_fatal_error: ");
     vfprintf(stderr, msg, args);
     va_end(args);
 }
