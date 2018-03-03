@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-VECTOR_DEFINE(, struct section, sections)
+VECTOR_DEFINE(, sections, struct section)
 
-static _Bool is_section_connected(struct sections sections,
+static bool is_section_connected(struct sections sections,
                                   struct section section)
 {
 	if (has_section_references(section))

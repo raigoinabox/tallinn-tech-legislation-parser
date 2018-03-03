@@ -1,11 +1,14 @@
-#include <stdlib.h>
+#include <cgraph.h>
+#include <gvc.h>
+#include <gvcext.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 #include <string.h>
 
-#include <gvc.h>
-
 #include "sections.h"
+#include "text_parser.h"
 #include "util.h"
 
 static char* get_node_id(char* section_number) {
@@ -15,6 +18,30 @@ static char* get_node_id(char* section_number) {
 		abort();
 	}
 	return node_id;
+}
+
+int printf_a(const char* template, ...) {
+	va_list args;
+	va_start(args, template);
+	int bytes_printed = vprintf(template, args);
+	va_end(args);
+	if (bytes_printed < 0) {
+		perror("vprintf");
+		abort();
+	}
+	return bytes_printed;
+}
+
+int printf_ea(const char* template, ...) {
+	va_list args;
+	va_start(args, template);
+	int bytes_printed = vfprintf(stderr, template, args);
+	va_end(args);
+	if (bytes_printed < 0) {
+		perror("vfprintf");
+		abort();
+	}
+	return bytes_printed;
 }
 
 void print_from_sections(FILE* file, struct sections connections,

@@ -10,6 +10,8 @@
 
 #include <stdbool.h>
 
-bool print_leg(int argc, const char* argv[], int offset);
+#include "arg_parsing.h"
+
+bool print_leg(const char* prog, struct arp_parser arg_parser);
 
 #endif /* PRINT_LEG_H_ */

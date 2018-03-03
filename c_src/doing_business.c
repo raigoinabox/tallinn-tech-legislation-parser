@@ -10,9 +10,9 @@
 #include <string.h>
 
 
-VECTOR_DEFINE(, struct leg_id, law_list)
-VECTOR_DEFINE(, struct dbu_law_category, law_category_list)
-VECTOR_DEFINE(, const char*, string_list)
+VECTOR_DEFINE(, law_list, struct leg_id)
+VECTOR_DEFINE(, law_category_list, struct dbu_law_category)
+VECTOR_DEFINE(, string_list, const char*)
 
 static struct law_category_list law_categories;
 
@@ -413,37 +413,4 @@ void dbu_init() {
 
 struct law_category_list get_english_law_categories() {
 	return law_categories;
-}
-
-bool get_dtf_by_name(double* result, const char* name)
-{
-/*
- * Closing a Business -  skipped
- * Employing Workers - skipped
- */
-	double _result = -1;
-	if (strcmp(name, "Getting Credit") == 0) {
-		_result = doing_business_data[0].getting_credit;
-	} else if (strcmp(name, "Protecting Investors") == 0) {
-		_result = doing_business_data[0].protecting_minority_investors;
-	} else if (strcmp(name, "Enforcing Contracts") == 0) {
-		_result = doing_business_data[0].enforcing_contracts;
-	} else if (strcmp(name, "Starting a Business") == 0) {
-		_result = doing_business_data[0].starting_a_business;
-	} else if (strcmp(name, "Dealing with Licenses") == 0) {
-		_result = doing_business_data[0].dealing_with_construction_permits;
-	} else if (strcmp(name, "Registering Property") == 0) {
-		_result = doing_business_data[0].registering_property;
-	} else if (strcmp(name, "Paying Taxes") == 0) {
-		_result = doing_business_data[0].paying_taxes;
-	} else if (strcmp(name, "Trading across Borders") == 0) {
-		_result = doing_business_data[0].trading_across_borders;
-	}
-
-	if (_result < 0) {
-		return false;
-	} else {
-		*result = _result;
-		return true;
-	}
 }

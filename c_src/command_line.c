@@ -8,32 +8,22 @@
 #include <assert.h>
 #include <string.h>
 
-#include "util.h"
 #include "safe_string.h"
 #include "vectors.h"
 #include "arg_parsing.h"
-
-struct global_args {
-	bool print_help;
-	const char* command;
-};
+#include "misc.h"
+#include "printing.h"
+#include "util.h"
 
 struct command {
 	const char* command;
 	const char* description;
 };
 
-VECTOR_DECLARE(static, struct command, command_vec)
-VECTOR_DEFINE(static, struct command, command_vec)
+VECTOR_DECLARE(static, command_vec, struct command)
+VECTOR_DEFINE(static, command_vec, struct command)
 
 static struct command_vec commands;
-static struct arp_option_vec global_options;
-
-static void set_global_help_option(void* args_p, const char* argument) {
-	(void) argument;
-	struct global_args* global_args_p = args_p;
-	global_args_p->print_help = true;
-}
 
 static struct print_args set_print_help_data(struct print_args result,
 		const char* argument) {
@@ -82,68 +72,7 @@ static const struct option_parameter print_options[] =
 						.argument_name =
 						NULL, .set_option_data = set_debug_data }, { 0 } };
 
-static int32_t find_space(const char* string) {
-	int32_t space_idx = 0;
-
-	while (string[space_idx] != '\0') {
-		if (string[space_idx] == ' ') {
-			return space_idx;
-		}
-
-		space_idx++;
-	}
-
-	return -1;
-}
-
-static struct string fit_text(const char* text, int32_t prefix_length) {
-	char help_indent[100];
-	if (prefix_length > 18) {
-		int print_result = sprintf(help_indent, "\n%18c", ' ');
-		assert(print_result >= 0);
-	} else {
-		int i = 0;
-		for (; i < 18 - prefix_length; i++) {
-			help_indent[i] = ' ';
-		}
-		help_indent[i] = '\0';
-	}
-
-	int help_text_len = strlen(text);
-	int32_t text_read = 0;
-	char split_text_buf[help_text_len * 2 + 10];
-	struct string split_text = str_init_s(split_text_buf,
-			sizeof(split_text_buf));
-	while (text_read < help_text_len) {
-		int32_t line_length = 0;
-		while (text_read < help_text_len) {
-			int32_t chars_to_space_w = find_space(text + text_read + 1);
-			int32_t chars_to_space = chars_to_space_w + 1;
-			if (chars_to_space_w == -1) {
-				chars_to_space = help_text_len - text_read;
-			}
-			if (chars_to_space + line_length >= 60 && line_length > 0) {
-				break;
-			}
-
-			str_appendn(&split_text, text + text_read, chars_to_space);
-			line_length += chars_to_space;
-			text_read += chars_to_space;
-		}
-		if (text_read >= help_text_len) {
-			break;
-		}
-
-		str_append(&split_text, "\n                    ");
-		text_read += 1;
-	}
-
-	struct string help_text = str_init();
-	str_appendf(&help_text, "%s  %s", help_indent, split_text.content);
-	return help_text;
-}
-
-static bool print_option_help(struct option_parameter option) {
+static void print_option_help(struct option_parameter option) {
 	char mod_long_form[strlen(option.long_form)
 			+ (option.argument_name == NULL ? 0 : strlen(option.argument_name))
 			+ 10];
@@ -164,7 +93,6 @@ static bool print_option_help(struct option_parameter option) {
 	printf_a("%s%s\n", str_content(prefix), str_content(help_text));
 	str_free(&prefix);
 	str_free(&help_text);
-	return true;
 }
 
 static bool is_null_option(struct option_parameter option) {
@@ -244,23 +172,32 @@ void mod_init_command_line() {
 	struct command command = { .command = "print", .description =
 			"Print legislation url as PDF." };
 	command_vec_append(&commands, command);
-	command.command = "comp-dbu";
-	command.description =
-			"Compare my parser results with those of Doing Business report.";
+	command.command = "save-dbu-compl";
+	command.description = "Save the the complexities of law that"
+			" belong into Doing Business report topics"
+			" into sqlite database data.db table complexity_results.";
 	command_vec_append(&commands, command);
-
-	global_options = arp_option_vec_init();
-	struct arp_option global_option = { .short_form = 'h', .long_form = "help",
-			.help_text = "Print this help message.", .argument_name =
-			NULL, .set_option = set_global_help_option };
-	arp_option_vec_append(&global_options, global_option);
 }
 
-bool print_help(const char* program_name) {
+static bool print_help(const char* program_name, struct arp_option_vec options) {
 	int result = printf("Usage: %s <command> [<args>] \n", program_name);
 	if (result < 0) {
 		return false;
 	}
+	printf_a("\n");
+	arp_print_options_help(options);
+	return true;
+}
+
+bool print_init_help(const char* program_name, struct arp_option_vec options) {
+	int result = printf("Usage: %s [OPTION] <command> [<args>] \n",
+			program_name);
+	if (result < 0) {
+		return false;
+	}
+	printf_a("\n");
+	arp_print_options_help(options);
+	printf_a("\n");
 	printf_a("Possible commands are:\n");
 	for (int i = 0; i < command_vec_length(commands); i++) {
 		struct command command = command_vec_get(commands, i);
@@ -270,15 +207,15 @@ bool print_help(const char* program_name) {
 		str_free(&description);
 	}
 	printf_a("\n");
-	printf_a("Write %s <command> -h for more information about the command.",
+	printf_a("Write %s <command> -h for more information about the command.\n",
 			program_name);
-	printf_a("\n");
 
 	return true;
 }
 
 bool print_print_help(const char* program_name) {
-	int result = printf("Usage: %s [OPTION]... legislation_act_url\n\n",
+	int result = printf(
+			"Usage: %s print-help [OPTION]... legislation_act_url\n\n",
 			program_name);
 	if (result < 0) {
 		return false;
@@ -289,36 +226,10 @@ bool print_print_help(const char* program_name) {
 			break;
 		}
 
-		if (!print_option_help(option)) {
-			return false;
-		}
+		print_option_help(option);
 	}
 
 	return true;
-}
-
-static bool parse_global_args(struct global_args* result, int argc,
-		char const* argv[]) {
-	assert(result != NULL);
-
-	struct arp_iterator iterator = get_arg_parsing_iterator(argc, argv, 0,
-			global_options);
-	while (arp_next(&iterator)) {
-		if (!arp_has(iterator)) {
-			return true;
-		}
-		if (arp_has_option(iterator)) {
-			struct arp_option option = arp_get_option(iterator);
-			option.set_option(result, arp_get_option_arg(iterator));
-		} else if (arp_get_arg_count(iterator) == 1) {
-			result->command = arp_get_arg(iterator);
-		} else {
-//			printf_ea("")
-//			break;
-		}
-	}
-
-	return false;
 }
 
 bool parse_print_args(struct print_args* result, int argc, char const* argv[],

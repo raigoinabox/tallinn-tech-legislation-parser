@@ -25,30 +25,6 @@ void* realloc_a(void* pointer, size_t nmemb, size_t memb_size)
 	return result;
 }
 
-int printf_a(const char* template, ...) {
-	va_list args;
-	va_start(args, template);
-	int bytes_printed = vprintf(template, args);
-	va_end(args);
-	if (bytes_printed < 0) {
-		perror("vprintf");
-		abort();
-	}
-	return bytes_printed;
-}
-
-int printf_ea(const char* template, ...) {
-	va_list args;
-	va_start(args, template);
-	int bytes_printed = vfprintf(stderr, template, args);
-	va_end(args);
-	if (bytes_printed < 0) {
-		perror("vfprintf");
-		abort();
-	}
-	return bytes_printed;
-}
-
 bool str_is_prefix(const char* string, const char* prefix)
 {
 	while (*prefix == *string && *prefix != '\0')

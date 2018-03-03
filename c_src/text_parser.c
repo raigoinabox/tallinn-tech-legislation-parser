@@ -11,7 +11,7 @@
 
 #include "safe_string.h"
 
-VECTOR_DEFINE(, char*, section_references)
+VECTOR_DEFINE(, section_references, char*)
 
 static bool str_is_prefix_ci(const char* text, const char* prefix) {
 	while (*prefix != 0) {

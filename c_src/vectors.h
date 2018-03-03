@@ -11,10 +11,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define STRINGIFY(arg) #arg
+
 #define VECTOR_STRUCT(type, name) \
 		struct name { type* content, size_t vector_size, size_t vector_length };
 
-#define VECTOR_DECLARE(modifier, type, name) \
+#define VECTOR_DECLARE(modifier, name, type) \
+	_Pragma(STRINGIFY(GCC diagnostic ignored "-Wunused-function")) \
 	struct name { \
 		struct vector parent; \
 	}; \
@@ -28,8 +31,8 @@
 	modifier bool name ## _contains(struct name name, type element, \
 			int (*comparator)(type element1, type element2));
 
-
-#define VECTOR_DEFINE(modifier, type, name) \
+#define VECTOR_DEFINE(modifier, name, type) \
+	_Pragma(STRINGIFY(GCC diagnostic ignored "-Wunused-function")) \
 	static int _vector_ ## name ## _compare(void* element1, void* element2, \
 			int (*type_comparator)(type element1, type element2)) \
 	{ \

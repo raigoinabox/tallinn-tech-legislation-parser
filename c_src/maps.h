@@ -20,7 +20,7 @@ struct map_entry
 	void* value;
 };
 
-VECTOR_DECLARE(, struct map_entry, _map)
+VECTOR_DECLARE(, _map, struct map_entry)
 
 struct map {
 	struct _map map;

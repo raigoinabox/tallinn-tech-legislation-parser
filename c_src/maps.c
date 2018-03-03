@@ -13,7 +13,7 @@
 
 #include "util.h"
 
-VECTOR_DEFINE(, struct map_entry, _map)
+VECTOR_DEFINE(, _map, struct map_entry)
 
 struct map map_init(int32_t key_size, int32_t value_size,
 		int (*comparator)(void* key1, void* key2, int (*type_comp)()),

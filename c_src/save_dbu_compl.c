@@ -5,10 +5,11 @@
  *      Author: raigo
  */
 
-#include "comp_dbu.h"
+#include "save_dbu_compl.h"
 
 #include <assert.h>
 #include <sqlite3.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -17,10 +18,10 @@
 #include "legislation.h"
 #include "maps.h"
 #include "misc.h"
+#include "printing.h"
 #include "results_dao.h"
 #include "safe_string.h"
 #include "sections.h"
-#include "util.h"
 #include "vectors.h"
 
 struct leg_complex {
@@ -29,8 +30,8 @@ struct leg_complex {
 	int32_t complexity;
 };
 
-VECTOR_DECLARE(static, struct leg_complex, leg_complex_list)
-VECTOR_DEFINE(static, struct leg_complex, leg_complex_list)
+VECTOR_DECLARE(static, leg_complex_list, struct leg_complex)
+VECTOR_DEFINE(static, leg_complex_list, struct leg_complex)
 
 MAP_DECLARE(, const char*, int32_t, cat_comps)
 MAP_DEFINE(, const char*, int32_t, cat_comps)
@@ -191,32 +192,65 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 	}
 }
 
-bool comp_dbu(int argc, const char* argv[], int32_t offset) {
-	(void) argc;
-	(void) argv;
-	(void) offset;
+static struct arp_option_vec get_options() {
+	struct arp_option_vec options = arp_option_vec_init();
+	struct arp_option option = { .short_form = 'h', .long_form = "help",
+			.help_text = "Print this help message.", .argument_name = NULL };
+	arp_option_vec_append(&options, option);
+	return options;
+}
 
-	dbu_init();
+bool save_dbu_compl(struct arp_parser parser) {
+	struct arp_option_vec options = get_options();
+	parser = arp_get_parser_from_parser(parser, options);
 
-	sqlite3* db_conn = db_open_conn();
-	delete_results(db_conn);
-	for (int i = 2004; i <= 2018; i++) {
-		char buffer[20];
-		sprintf(buffer, "%d-%02d-%02d", i, 1, 1);
-		struct string date = str_init();
-		str_append(&date, buffer);
+	bool print_help = false;
+	bool is_success = arp_next(&parser);
+	while (is_success && arp_has(parser)) {
+		if (arp_has_option(parser)) {
+			switch (arp_get_option_key(parser)) {
+			case 'h':
+				print_help = true;
+				break;
+			default:
+				return false;
+			}
+		} else {
+			printf_ea("This command takes no arguments.\n");
+			return false;
+		}
 
-		const struct law_category_list law_categories =
-				get_english_law_categories();
-		struct cat_compl_list cat_compl_list = get_norm_category_complexities(
-				law_categories, date);
-		insert_cat_cmpxs(db_conn, i, cat_compl_list);
-
-//		print_norm_category_complexities(law_categories, date);
-		cat_compl_list_free(&cat_compl_list);
-		str_free(&date);
+		is_success = arp_next(&parser);
 	}
-	db_close_conn(db_conn);
+	if (!is_success) {
+		return false;
+	}
+
+	if (print_help) {
+		arp_print_options_help(options);
+	} else {
+		dbu_init();
+
+		sqlite3* db_conn = db_open_conn();
+		delete_results(db_conn);
+		for (int i = 2004; i <= 2018; i++) {
+			char buffer[20];
+			sprintf(buffer, "%d-%02d-%02d", i, 1, 1);
+			struct string date = str_init();
+			str_append(&date, buffer);
+
+			const struct law_category_list law_categories =
+					get_english_law_categories();
+			struct cat_compl_list cat_compl_list = get_norm_category_complexities(
+					law_categories, date);
+			insert_cat_cmpxs(db_conn, i, cat_compl_list);
+
+			print_norm_category_complexities(law_categories, date);
+			cat_compl_list_free(&cat_compl_list);
+			str_free(&date);
+		}
+		db_close_conn(db_conn);
+	}
 
 	return true;
 }
