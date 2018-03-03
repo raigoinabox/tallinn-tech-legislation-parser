@@ -17,13 +17,12 @@ struct arp_option {
 	const char* long_form;
 	const char* help_text;
 	const char* argument_name;
-	void (*set_option)(void* args_p, const char* argument);
 };
 
-VECTOR_DECLARE(static, struct arp_option, arp_option_vec)
-VECTOR_DEFINE(static, struct arp_option, arp_option_vec)
+VECTOR_DECLARE(static, arp_option_vec, struct arp_option)
+VECTOR_DEFINE(static, arp_option_vec, struct arp_option)
 
-struct arp_iterator {
+struct arp_parser {
 	int argc;
 	const char** argv;
 	struct arp_option_vec options;
@@ -31,31 +30,29 @@ struct arp_iterator {
 	bool keep_parsing_options;
 	int arg_index;
 	int cur_arg_count;
+	bool is_end;
 
 	struct _arp_ret {
 		struct arp_option option;
 		const char* sho_opt_iter;
 		const char* option_arg;
 		const char* argument;
-		enum {
-			ret_begin,
-			ret_end,
-			ret_argument,
-			ret_option_argument,
-			ret_sho_opt,
-			ret_long_opt
-		} mode;
 	} ret;
 };
 
-struct arp_iterator get_arg_parsing_iterator(int argc, const char** argv,
-		int offset, struct arp_option_vec options);
-bool arp_next(struct arp_iterator* iterator);
-bool arp_has(struct arp_iterator iterator);
-bool arp_has_option(struct arp_iterator iterator);
-struct arp_option arp_get_option(struct arp_iterator iterator);
-const char* arp_get_option_arg(struct arp_iterator iterator);
-int32_t arp_get_arg_count(struct arp_iterator iterator);
-const char* arp_get_arg(struct arp_iterator iterator);
+struct arp_parser arp_get_parser(int argc, const char** argv, int offset,
+		struct arp_option_vec options);
+struct arp_parser arp_get_parser_from_parser(struct arp_parser parser,
+		struct arp_option_vec options);
+bool arp_next(struct arp_parser* iterator);
+
+bool arp_has(struct arp_parser iterator);
+bool arp_has_option(struct arp_parser iterator);
+char arp_get_option_key(struct arp_parser iterator);
+const char* arp_get_option_arg(struct arp_parser iterator);
+int32_t arp_get_arg_count(struct arp_parser iterator);
+const char* arp_get_arg(struct arp_parser iterator);
+
+void arp_print_options_help(struct arp_option_vec options);
 
 #endif /* ARG_PARSING_H_ */

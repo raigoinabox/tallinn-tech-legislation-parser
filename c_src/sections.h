@@ -11,7 +11,7 @@ struct section
 	struct section_references references;
 };
 
-VECTOR_DECLARE(, struct section, sections)
+VECTOR_DECLARE(, sections, struct section)
 
 void sections_free_deep(struct sections* array_p);
 

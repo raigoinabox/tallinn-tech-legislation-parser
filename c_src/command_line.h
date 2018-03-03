@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "safe_string.h"
+#include "arg_parsing.h"
 
 struct option_parameter {
 	char short_form;
@@ -22,7 +22,7 @@ struct print_args {
 };
 
 void mod_init_command_line();
-bool print_help(const char* program_name);
+bool print_init_help(const char* program_name, struct arp_option_vec options);
 bool print_print_help(const char* program_name);
 bool parse_print_args(struct print_args* result, int argc, char const* argv[],
 		int32_t offset);

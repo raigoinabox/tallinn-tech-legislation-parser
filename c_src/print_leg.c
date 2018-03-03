@@ -117,15 +117,86 @@ static bool process_args(struct run_info* result, struct print_args args) {
 	return true;
 }
 
-bool print_leg(int argc, const char* argv[], int offset) {
+static struct arp_option_vec get_options() {
+	struct arp_option_vec options = arp_option_vec_init();
+	struct arp_option option = { .short_form = 'h', .long_form = "help",
+			.help_text = "Print this help message.", .argument_name = NULL };
+	arp_option_vec_append(&options, option);
+	option.short_form = 'o';
+	option.long_form = "output";
+	option.help_text = "Print output to FILE instead."
+			" If instead of a file there is a -,"
+			" the program will write to standard output."
+			" By default calculates a reasonable file name"
+			" and doesn't overwrite any existing file.";
+	option.argument_name = "FILE";
+	arp_option_vec_append(&options, option);
+	option.short_form = 'f';
+	option.long_form = "format";
+	option.help_text = "Write output in FORMAT instead."
+			" By default prints output in pdf."
+			" The possible formats are the same"
+			" as for graphviz:"
+			" http://www.graphviz.org/doc/info/output.html.";
+	option.argument_name = "FORMAT";
+	arp_option_vec_append(&options, option);
+	option.short_form = 'g';
+	option.long_form = "debug";
+	option.help_text = "Debug mode. Shows false-positives.";
+	option.argument_name = NULL;
+	arp_option_vec_append(&options, option);
+	return options;
+}
+
+static bool parse_args(struct print_args* result_p, const char* prog,
+		struct arp_parser parser) {
+	struct print_args result = { 0 };
+	bool success = arp_next(&parser);
+	while (success && arp_has(parser)) {
+		if (arp_has_option(parser)) {
+			switch (arp_get_option_key(parser)) {
+			case 'h':
+				result.print_help = true;
+				break;
+			case 'o':
+				result.output_file_name = arp_get_option_arg(parser);
+				break;
+			case 'f':
+				result.format = arp_get_option_arg(parser);
+				break;
+			case 'g':
+				result.debug = true;
+				break;
+			default:
+				print_print_help(prog);
+				return false;
+			}
+		} else if (arp_get_arg_count(parser) == 1) {
+			result.url = arp_get_arg(parser);
+		} else {
+			print_print_help(prog);
+			return false;
+		}
+	}
+	if (!success) {
+		return false;
+	}
+
+	*result_p = result;
+	return true;
+}
+
+bool print_leg(const char* prog, struct arp_parser arg_parser) {
 	struct print_args args;
-	bool success = parse_print_args(&args, argc, argv, offset);
+
+	bool success = parse_args(&args, prog,
+			arp_get_parser_from_parser(arg_parser, get_options()));
 	if (!success) {
 		return false;
 	}
 
 	if (args.print_help) {
-		print_print_help(argv[0]);
+		print_print_help(prog);
 	} else {
 		struct run_info run_info;
 		if (!process_args(&run_info, args)) {
@@ -133,9 +204,9 @@ bool print_leg(int argc, const char* argv[], int offset) {
 		}
 
 		struct sections sections;
-		success = get_sections_from_legislation(&sections, run_info.legislation);
-		if (!success)
-		{
+		success = get_sections_from_legislation(&sections,
+				run_info.legislation);
+		if (!success) {
 			return false;
 		}
 		if (!args.debug) {
