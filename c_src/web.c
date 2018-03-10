@@ -100,7 +100,6 @@ bool parse_url(struct leg_id* result, const char* url) {
 	}
 	strtok(domain, "/");
 
-	struct leg_id legislation;
 	char* type = strtok(NULL, "/");
 	if (type == NULL) {
 		return false;
@@ -114,17 +113,19 @@ bool parse_url(struct leg_id* result, const char* url) {
 		return false;
 	}
 
-	legislation.type = str_init_ds(strlen(type) + 10);
-	str_append(&legislation.type, type);
+	struct string leg_type = str_init_ds(strlen(type) + 10);
+	str_append(&leg_type, type);
+	struct string leg_year = str_init_ds(strlen(year) + 10);
+	str_append(&leg_year, year);
+	struct string leg_number = str_init_ds(strlen(number) + 10);
+	str_append(&leg_number, number);
 
-	legislation.year = str_init_ds(strlen(year) + 10);
-	str_append(&legislation.year, year);
-
-	legislation.number = str_init_ds(strlen(number) + 10);
-	str_append(&legislation.number, number);
+	struct leg_id legislation;
+	legislation.type = leg_type;
+	legislation.year = leg_year;
+	legislation.number = leg_number;
 
 	*result = legislation;
-
 	return true;
 }
 
@@ -133,14 +134,14 @@ struct string get_api_url(struct leg_id legislation) {
 			str_length(legislation.type) + str_length(legislation.year)
 					+ str_length(legislation.number) + 128);
 	str_append(&normalized, "http://www.legislation.gov.uk/");
-	str_appends(&normalized, legislation.type);
+	str_appends(&normalized, cst_from_str(legislation.type));
 	str_append(&normalized, "/");
-	str_appends(&normalized, legislation.year);
+	str_appends(&normalized, cst_from_str(legislation.year));
 	str_append(&normalized, "/");
-	str_appends(&normalized, legislation.number);
+	str_appends(&normalized, cst_from_str(legislation.number));
 	if (str_length(legislation.version_date) == 10) {
 		str_append(&normalized, "/");
-		str_appends(&normalized, legislation.version_date);
+		str_appends(&normalized, cst_from_str(legislation.version_date));
 	}
 	str_append(&normalized, "/data.xml");
 

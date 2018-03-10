@@ -15,6 +15,9 @@ callgrind.out.*
 makefile.targets
 meson-build
 .Rproj.user
+r_src/.RData
+r_src/.Rhistory
+r_src/r_project.Rproj
 r_project/.RData
 r_project/.Rhistory
 r_project/r_project.Rproj

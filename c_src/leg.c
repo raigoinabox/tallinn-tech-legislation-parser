@@ -15,11 +15,12 @@ struct global_args {
 };
 
 static struct arp_option_vec get_leg_options() {
-	struct arp_option_vec leg_options = arp_option_vec_init();
+	struct arp_option_vec leg_options;
+	vec_init(leg_options);
 	struct arp_option global_option = { .short_form = 'h', .long_form = "help",
 			.help_text = "Print this help message.", .argument_name =
 			NULL };
-	arp_option_vec_append(&leg_options, global_option);
+	vec_append(leg_options, global_option);
 	return leg_options;
 }
 
@@ -55,41 +56,61 @@ static bool parse_init_args(struct global_args* result_p,
 	return success;
 }
 
+static struct command_vec get_commands() {
+	struct command_vec commands;
+	vec_init(commands);
+	struct command command = { .command = "print", .description =
+			"Print legislation url as PDF." };
+	vec_append(commands, command);
+	command.command = "save-dbu-compl";
+	command.description = "Save the the complexities of law that"
+			" belong into Doing Business report topics"
+			" into sqlite database data.db table complexity_results.";
+	vec_append(commands, command);
+	return commands;
+}
+
 int main(int argc, char const* argv[]) {
 	if (argc < 1) {
 		abort();
 	}
-	mod_init_command_line();
+	struct command_vec commands = get_commands();
 	struct arp_option_vec options = get_leg_options();
 	struct arp_parser parser = arp_get_parser(argc, argv, 0,
 			options);
 
 	struct global_args result;
 	if (!parse_init_args(&result, &parser)) {
+		vec_free(commands);
+		vec_free(options);
 		return EXIT_FAILURE;
 	}
 
 	if (result.print_help) {
-		print_init_help(argv[0], options);
-		return EXIT_SUCCESS;
-	}
-
-	bool success = false;
-	if (result.command == NULL) {
-		printf_ea("%s: command is required\n", argv[0]);
-		print_init_help(argv[0], options);
-	} else if (strcmp("print", result.command) == 0) {
-		success = print_leg(argv[0], parser);
-	} else if (strcmp("save-dbu-compl", result.command) == 0) {
-		success = save_dbu_compl(parser);
-	} else {
-		printf_ea("%s: unknown command: %s\n", argv[0], result.command);
-		print_init_help(argv[0], options);
-	}
-
-	if (success) {
+		col_print_init_help(argv[0], options, commands);
+		vec_free(commands);
+		vec_free(options);
 		return EXIT_SUCCESS;
 	} else {
-		return EXIT_FAILURE;
+		bool success = false;
+		if (result.command == NULL) {
+			printf_ea("%s: command is required\n", argv[0]);
+			col_print_init_help(argv[0], options, commands);
+		} else if (strcmp("print", result.command) == 0) {
+			success = print_leg(argv[0], result.command, parser);
+		} else if (strcmp("save-dbu-compl", result.command) == 0) {
+			success = save_dbu_compl(argv[0], result.command, parser);
+		} else {
+			printf_ea("%s: unknown command: %s\n", argv[0], result.command);
+			col_print_init_help(argv[0], options, commands);
+		}
+
+		vec_free(commands);
+		vec_free(options);
+		if (success) {
+			return EXIT_SUCCESS;
+		} else {
+			return EXIT_FAILURE;
+		}
 	}
 }

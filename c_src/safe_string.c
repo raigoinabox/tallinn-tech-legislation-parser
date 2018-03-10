@@ -7,12 +7,9 @@
 
 #include "util.h"
 
-static void expand_s(struct string* string_p) {
-	(void) string_p;
-	abort();
-}
 static void expand_d(struct string* string_p) {
 	struct string string = *string_p;
+
 	string.size *= 2;
 	string.content = realloc(string.content, string.size * sizeof(*string.content));
 	if (string.content == NULL)
@@ -20,6 +17,11 @@ static void expand_d(struct string* string_p) {
 		abort();
 	}
 	*string_p = string;
+}
+
+static void expand_s(struct string* string_p) {
+	assert(false);
+	expand_d(string_p);
 }
 
 static void append(struct string* string_p, const char* text)
@@ -92,6 +94,29 @@ static void str_free_d(struct string* string_p) {
 	string.size = 0;
 
 	*string_p = string;
+}
+
+struct cstring cst_init(const char* text) {
+	size_t text_len = strlen(text);
+	struct cstring cstring;
+	vec_init_c(cstring.vector, text, text_len + 1);
+	cstring.string_length = text_len;
+	return cstring;
+}
+
+struct cstring cst_from_str(struct string string) {
+	struct cstring cstr;
+	vec_init_c(cstr.vector, string.content, string.size);
+	cstr.string_length = string.length;
+	return cstr;
+}
+
+const char* cst_content(struct cstring string) {
+	return vec_content(string.vector);
+}
+
+size_t cst_length(struct cstring string) {
+	return string.string_length;
 }
 
 struct string str_init_s(char* buffer, int32_t size) {
@@ -168,9 +193,9 @@ void str_appendn(struct string* string, const char* content, int32_t count) {
 	string->appendn(string, content, count);
 }
 
-void str_appends(struct string* string_p, struct string text)
+void str_appends(struct string* string_p, struct cstring text)
 {
-	str_append(string_p, str_content(text));
+	str_append(string_p, cst_content(text));
 }
 
 bool str_append_char(struct string* string_p, char character) {

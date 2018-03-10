@@ -19,8 +19,7 @@ struct arp_option {
 	const char* argument_name;
 };
 
-VECTOR_DECLARE(static, arp_option_vec, struct arp_option)
-VECTOR_DEFINE(static, arp_option_vec, struct arp_option)
+vec_struct(arp_option_vec, struct arp_option);
 
 struct arp_parser {
 	int argc;
@@ -44,14 +43,14 @@ struct arp_parser arp_get_parser(int argc, const char** argv, int offset,
 		struct arp_option_vec options);
 struct arp_parser arp_get_parser_from_parser(struct arp_parser parser,
 		struct arp_option_vec options);
-bool arp_next(struct arp_parser* iterator);
+bool arp_next(struct arp_parser* parser);
 
-bool arp_has(struct arp_parser iterator);
-bool arp_has_option(struct arp_parser iterator);
-char arp_get_option_key(struct arp_parser iterator);
-const char* arp_get_option_arg(struct arp_parser iterator);
-int32_t arp_get_arg_count(struct arp_parser iterator);
-const char* arp_get_arg(struct arp_parser iterator);
+bool arp_has(struct arp_parser parser);
+bool arp_has_option(struct arp_parser parser);
+char arp_get_option_key(struct arp_parser parser);
+const char* arp_get_option_arg(struct arp_parser parser);
+int32_t arp_get_arg_count(struct arp_parser parser);
+const char* arp_get_arg(struct arp_parser parser);
 
 void arp_print_options_help(struct arp_option_vec options);
 

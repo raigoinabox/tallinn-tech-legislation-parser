@@ -13,42 +13,40 @@
 
 #include "util.h"
 
-VECTOR_DEFINE(, _map, struct map_entry)
-
 struct map map_init(int32_t key_size, int32_t value_size,
 		int (*comparator)(void* key1, void* key2, int (*type_comp)()),
 		int (*type_comparator)())
 {
 	struct map map = {
-			.map = _map_init(),
 			.key_size = key_size,
 			.value_size = value_size,
 			.comparator = comparator,
 			.type_comparator = type_comparator
 	};
+	vec_init(map.map);
 	return map;
 }
 
 void map_free(struct map* map_p)
 {
 	struct map map = *map_p;
-	for (int i = 0; i < _map_length(map.map); i++)
+	for (size_t i = 0; i < vec_length(map.map); i++)
 	{
-		struct map_entry map_entry = _map_get(map.map, i);
+		struct map_entry map_entry = vec_elem(map.map, i);
 		free(map_entry.key);
 		map_entry.key = NULL;
 		free(map_entry.value);
 		map_entry.value = NULL;
 	}
-	_map_free(&map.map);
+	vec_free(map.map);
 	*map_p = map;
 }
 
 bool map_get_value_p(void** result, struct map map, void* key)
 {
-	for (int i = 0; i < _map_length(map.map); i++)
+	for (size_t i = 0; i < vec_length(map.map); i++)
 	{
-		struct map_entry map_entr = _map_get(map.map, i);
+		struct map_entry map_entr = vec_elem(map.map, i);
 		if (map.comparator(map_entr.key, key, map.type_comparator) == 0)
 		{
 			*result = map_entr.value;
@@ -75,7 +73,7 @@ void map_set(struct map* map_p, void* key, void* value)
 		};
 		memmove(map_entry.key, key, map.key_size);
 		memmove(map_entry.value, value, map.value_size);
-		_map_append(&map.map, map_entry);
+		vec_append(map.map, map_entry);
 		*map_p = map;
 	}
 }
@@ -100,17 +98,17 @@ void map_iterator_next(struct map_iterator* iterator_p)
 
 bool map_iterator_has_next(struct map_iterator iterator)
 {
-	return iterator.vector_index < _map_length(iterator.map.map) - 1;
+	return iterator.vector_index < vec_length(iterator.map.map) - 1;
 }
 
 void* map_iterator_get_key_p(struct map_iterator iterator)
 {
-	return _map_get(iterator.map.map, iterator.vector_index).key;
+	return vec_elem(iterator.map.map, iterator.vector_index).key;
 }
 
 void* map_iterator_get_value_p(struct map_iterator iterator)
 {
-	return _map_get(iterator.map.map, iterator.vector_index).value;
+	return vec_elem(iterator.map.map, iterator.vector_index).value;
 }
 
 void map_iterator_set(struct map_iterator* iterator_p, void* value)

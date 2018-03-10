@@ -29,17 +29,25 @@ struct run_info {
 	bool debug;
 };
 
+struct print_args {
+	const char* url;
+	const char* output_file_name;
+	const char* format;
+	bool print_help;
+	bool debug;
+};
+
 static bool get_default_file(FILE** result, struct leg_id legislation,
 		const char* format) {
 	struct string file_name = str_init_ds(
 			str_length(legislation.type) + str_length(legislation.year)
 					+ str_length(legislation.number) + strlen(format) + 10);
 
-	str_appends(&file_name, legislation.type);
+	str_appends(&file_name, cst_from_str(legislation.type));
 	str_append(&file_name, "_");
-	str_appends(&file_name, legislation.year);
+	str_appends(&file_name, cst_from_str(legislation.year));
 	str_append(&file_name, "_");
-	str_appends(&file_name, legislation.number);
+	str_appends(&file_name, cst_from_str(legislation.number));
 	str_append(&file_name, ".");
 	str_append(&file_name, format);
 
@@ -51,11 +59,11 @@ static bool get_default_file(FILE** result, struct leg_id legislation,
 		char file_number_str[100];
 		sprintf(file_number_str, "%d", file_number);
 		str_clear(&file_name);
-		str_appends(&file_name, legislation.type);
+		str_appends(&file_name, cst_from_str(legislation.type));
 		str_append(&file_name, "_");
-		str_appends(&file_name, legislation.year);
+		str_appends(&file_name, cst_from_str(legislation.year));
 		str_append(&file_name, "_");
-		str_appends(&file_name, legislation.number);
+		str_appends(&file_name, cst_from_str(legislation.number));
 		str_append(&file_name, "-");
 		str_append(&file_name, file_number_str);
 		str_append(&file_name, ".");
@@ -118,10 +126,11 @@ static bool process_args(struct run_info* result, struct print_args args) {
 }
 
 static struct arp_option_vec get_options() {
-	struct arp_option_vec options = arp_option_vec_init();
+	struct arp_option_vec options;
+	vec_init(options);
 	struct arp_option option = { .short_form = 'h', .long_form = "help",
 			.help_text = "Print this help message.", .argument_name = NULL };
-	arp_option_vec_append(&options, option);
+	vec_append(options, option);
 	option.short_form = 'o';
 	option.long_form = "output";
 	option.help_text = "Print output to FILE instead."
@@ -130,7 +139,7 @@ static struct arp_option_vec get_options() {
 			" By default calculates a reasonable file name"
 			" and doesn't overwrite any existing file.";
 	option.argument_name = "FILE";
-	arp_option_vec_append(&options, option);
+	vec_append(options, option);
 	option.short_form = 'f';
 	option.long_form = "format";
 	option.help_text = "Write output in FORMAT instead."
@@ -139,17 +148,18 @@ static struct arp_option_vec get_options() {
 			" as for graphviz:"
 			" http://www.graphviz.org/doc/info/output.html.";
 	option.argument_name = "FORMAT";
-	arp_option_vec_append(&options, option);
+	vec_append(options, option);
 	option.short_form = 'g';
 	option.long_form = "debug";
 	option.help_text = "Debug mode. Shows false-positives.";
 	option.argument_name = NULL;
-	arp_option_vec_append(&options, option);
+	vec_append(options, option);
 	return options;
 }
 
 static bool parse_args(struct print_args* result_p, const char* prog,
-		struct arp_parser parser) {
+		const char* command, struct arp_parser parser,
+		struct arp_option_vec options, const char* argument_text) {
 	struct print_args result = { 0 };
 	bool success = arp_next(&parser);
 	while (success && arp_has(parser)) {
@@ -168,16 +178,24 @@ static bool parse_args(struct print_args* result_p, const char* prog,
 				result.debug = true;
 				break;
 			default:
-				print_print_help(prog);
+				col_print_command_help(prog, command, options, argument_text);
 				return false;
 			}
 		} else if (arp_get_arg_count(parser) == 1) {
 			result.url = arp_get_arg(parser);
 		} else {
-			print_print_help(prog);
+			printf_ea("%s: too many arguments\n", prog);
+			col_print_command_help(prog, command, options, argument_text);
 			return false;
 		}
+		success = arp_next(&parser);
 	}
+
+	if (arp_get_arg_count(parser) < 1) {
+		printf_ea("%s: arguments required\n", prog);
+		return false;
+	}
+
 	if (!success) {
 		return false;
 	}
@@ -186,17 +204,21 @@ static bool parse_args(struct print_args* result_p, const char* prog,
 	return true;
 }
 
-bool print_leg(const char* prog, struct arp_parser arg_parser) {
+bool print_leg(const char* prog, const char* command,
+		struct arp_parser arg_parser) {
 	struct print_args args;
-
-	bool success = parse_args(&args, prog,
-			arp_get_parser_from_parser(arg_parser, get_options()));
-	if (!success) {
+	struct arp_option_vec options = get_options();
+	const char* argument_text = "legislation_act_url";
+	if (!parse_args(&args, prog, command,
+			arp_get_parser_from_parser(arg_parser, options), options,
+			argument_text)) {
 		return false;
 	}
 
 	if (args.print_help) {
-		print_print_help(prog);
+		if (!col_print_command_help(prog, command, options, argument_text)) {
+			return false;
+		}
 	} else {
 		struct run_info run_info;
 		if (!process_args(&run_info, args)) {
@@ -204,9 +226,8 @@ bool print_leg(const char* prog, struct arp_parser arg_parser) {
 		}
 
 		struct sections sections;
-		success = get_sections_from_legislation(&sections,
-				run_info.legislation);
-		if (!success) {
+		if (!get_sections_from_legislation(&sections,
+				run_info.legislation)) {
 			return false;
 		}
 		if (!args.debug) {

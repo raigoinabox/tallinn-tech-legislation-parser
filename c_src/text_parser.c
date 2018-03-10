@@ -11,8 +11,6 @@
 
 #include "safe_string.h"
 
-VECTOR_DEFINE(, section_references, char*)
-
 static bool str_is_prefix_ci(const char* text, const char* prefix) {
 	while (*prefix != 0) {
 		if (*text == 0 || tolower(*text) != tolower(*prefix)) {
@@ -136,7 +134,8 @@ error:
 // doesn't handle cases:
 // section 119A(4) of the Enterprise Act 2002 (c. 40) (which applies to functions
 static struct section_references get_references_from_match(const char* text) {
-	struct section_references result = section_references_init();
+	struct section_references result;
+	vec_init(result);
 
 	const char* char_p = text;
 
@@ -155,7 +154,7 @@ static struct section_references get_references_from_match(const char* text) {
 	if (error > 0) {
 		goto parse_end;
 	}
-	section_references_append(&result, str_content(reference));
+	vec_append(result, str_content(reference));
 
 	bool had_space;
 	while (true) {
@@ -208,10 +207,10 @@ static struct section_references get_references_from_match(const char* text) {
 						abort();
 					}
 
-					section_references_append(&result, str_content(i_string));
+					vec_append(result, str_content(i_string));
 				}
 			}
-			section_references_append(&result, str_content(reference));
+			vec_append(result, str_content(reference));
 		}
 	}
 
@@ -230,23 +229,25 @@ parse_end:
 
 ignore_references:
 	free_references_deep(&result);
-	return section_references_init();
+	vec_init(result);
+	return result;
 }
 
 void free_references_deep(struct section_references* references_p) {
 	struct section_references references = *references_p;
 
-	for (int32_t i = 0; i < section_references_length(references); i++) {
-		free(section_references_get(references, i));
+	for (size_t i = 0; i < vec_length(references); i++) {
+		free(vec_elem(references, i));
 	}
 
-	section_references_free(&references);
+	vec_free(references);
 
 	*references_p = references;
 }
 
 struct section_references get_references_from_text(const char* text) {
-	struct section_references result = section_references_init();
+	struct section_references result;
+	vec_init(result);
 
 	const char* error_message;
 	int error_offset;
@@ -262,25 +263,18 @@ struct section_references get_references_from_text(const char* text) {
 	int matches = pcre_exec(regex, NULL, text, text_len, 0, 0, ovector,
 			ovector_size);
 	while (matches > 0) {
-		// char buffer[80];
-		// strncpy(buffer, text + ovector[0], 79);
-		// buffer[79] = 0;
-		// fprintf(stderr, "%s\n", buffer);
 		struct section_references refs_from_match = get_references_from_match(
 				text + ovector[0]);
-		for (int i = 0; i < section_references_length(refs_from_match); i++) {
-			char* const reference = section_references_get(refs_from_match, i);
-			section_references_append(&result, reference);
-			// fprintf(stderr, "%ld ", reference);
+		for (size_t i = 0; i < vec_length(refs_from_match); i++) {
+			char* const reference = vec_elem(refs_from_match, i);
+			vec_append(result, reference);
 		}
-		section_references_free(&refs_from_match);
-		// fprintf(stderr, "\n");
+		vec_free(refs_from_match);
 
 		matches = pcre_exec(regex, NULL, text, text_len, ovector[1], 0, ovector,
 				ovector_size);
 	}
 	if (matches != -1) {
-		// fprintf(stderr, "match error: %d\n", matches);
 		abort();
 	}
 
