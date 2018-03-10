@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "safe_string.h"
+#include "strings.h"
 
 static bool str_is_prefix_ci(const char* text, const char* prefix) {
 	while (*prefix != 0) {
@@ -83,7 +83,7 @@ static int32_t parse_section_reference(struct string* result_p, const char** cha
 
 		result = str_init_ds(ref_buf_i + 2);
 		result_string_initialized = true;
-		str_append(&result, ref_buffer);
+		str_appends(&result, ref_buffer);
 	} else if (*char_p == '(') {
 		reference_exists = false;
 	} else {

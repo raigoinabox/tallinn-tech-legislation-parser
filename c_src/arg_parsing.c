@@ -14,7 +14,7 @@
 
 #include "misc.h"
 #include "printing.h"
-#include "safe_string.h"
+#include "strings.h"
 #include "util.h"
 
 static bool find_option(struct arp_option* result,

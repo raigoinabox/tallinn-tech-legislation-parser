@@ -11,12 +11,12 @@
 #include <sqlite3.h>
 #include <stdint.h>
 
-#include "safe_string.h"
+#include "strings.h"
 
 struct complexity_result_dto {
-	struct cstring country;
+	struct string country;
 	int32_t year;
-	struct cstring dbu_category;
+	struct string dbu_category;
 	int32_t complexity;
 };
 

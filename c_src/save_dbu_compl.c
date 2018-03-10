@@ -21,8 +21,8 @@
 #include "misc.h"
 #include "printing.h"
 #include "results_dao.h"
-#include "safe_string.h"
 #include "sections.h"
+#include "strings.h"
 #include "vectors.h"
 
 struct leg_complex {
@@ -184,8 +184,8 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 	while (cat_compl_list_iterator_has_next(iterator)) {
 		cat_compl_list_iterator_next(&iterator);
 		struct complexity_result_dto result =
-				{ .country = cst_init("GB"), .year = year, .dbu_category =
-						cst_init(cat_compl_list_iterator_get_key(iterator)),
+				{ .country = str_const("GB"), .year = year, .dbu_category =
+						str_const(cat_compl_list_iterator_get_key(iterator)),
 						.complexity = cat_compl_list_iterator_get_value(
 								iterator).complexity_total };
 		insert_result(db_conn, result);
@@ -244,7 +244,7 @@ bool save_dbu_compl(const char* prog, const char* command,
 			char buffer[20];
 			sprintf(buffer, "%d-%02d-%02d", i, 1, 1);
 			struct string date = str_init();
-			str_append(&date, buffer);
+			str_appends(&date, buffer);
 
 			const struct law_category_list law_categories =
 					get_english_law_categories();

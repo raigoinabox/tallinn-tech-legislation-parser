@@ -114,11 +114,11 @@ bool parse_url(struct leg_id* result, const char* url) {
 	}
 
 	struct string leg_type = str_init_ds(strlen(type) + 10);
-	str_append(&leg_type, type);
+	str_appends(&leg_type, type);
 	struct string leg_year = str_init_ds(strlen(year) + 10);
-	str_append(&leg_year, year);
+	str_appends(&leg_year, year);
 	struct string leg_number = str_init_ds(strlen(number) + 10);
-	str_append(&leg_number, number);
+	str_appends(&leg_number, number);
 
 	struct leg_id legislation;
 	legislation.type = leg_type;
@@ -133,17 +133,17 @@ struct string get_api_url(struct leg_id legislation) {
 	struct string normalized = str_init_ds(
 			str_length(legislation.type) + str_length(legislation.year)
 					+ str_length(legislation.number) + 128);
-	str_append(&normalized, "http://www.legislation.gov.uk/");
-	str_appends(&normalized, cst_from_str(legislation.type));
-	str_append(&normalized, "/");
-	str_appends(&normalized, cst_from_str(legislation.year));
-	str_append(&normalized, "/");
-	str_appends(&normalized, cst_from_str(legislation.number));
+	str_appends(&normalized, "http://www.legislation.gov.uk/");
+	str_append(&normalized, legislation.type);
+	str_appends(&normalized, "/");
+	str_append(&normalized, legislation.year);
+	str_appends(&normalized, "/");
+	str_append(&normalized, legislation.number);
 	if (str_length(legislation.version_date) == 10) {
-		str_append(&normalized, "/");
-		str_appends(&normalized, cst_from_str(legislation.version_date));
+		str_appends(&normalized, "/");
+		str_append(&normalized, legislation.version_date);
 	}
-	str_append(&normalized, "/data.xml");
+	str_appends(&normalized, "/data.xml");
 
 	return normalized;
 }

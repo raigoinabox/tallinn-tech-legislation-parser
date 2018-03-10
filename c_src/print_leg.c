@@ -18,8 +18,8 @@
 #include "legislation.h"
 #include "misc.h"
 #include "printing.h"
-#include "safe_string.h"
 #include "sections.h"
+#include "strings.h"
 #include "web.h"
 
 struct run_info {
@@ -43,13 +43,13 @@ static bool get_default_file(FILE** result, struct leg_id legislation,
 			str_length(legislation.type) + str_length(legislation.year)
 					+ str_length(legislation.number) + strlen(format) + 10);
 
-	str_appends(&file_name, cst_from_str(legislation.type));
-	str_append(&file_name, "_");
-	str_appends(&file_name, cst_from_str(legislation.year));
-	str_append(&file_name, "_");
-	str_appends(&file_name, cst_from_str(legislation.number));
-	str_append(&file_name, ".");
-	str_append(&file_name, format);
+	str_append(&file_name, legislation.type);
+	str_appends(&file_name, "_");
+	str_append(&file_name, legislation.year);
+	str_appends(&file_name, "_");
+	str_append(&file_name, legislation.number);
+	str_appends(&file_name, ".");
+	str_appends(&file_name, format);
 
 	int32_t file_number = 1;
 	FILE* output_file = fopen(str_content(file_name), "r");
@@ -59,15 +59,15 @@ static bool get_default_file(FILE** result, struct leg_id legislation,
 		char file_number_str[100];
 		sprintf(file_number_str, "%d", file_number);
 		str_clear(&file_name);
-		str_appends(&file_name, cst_from_str(legislation.type));
-		str_append(&file_name, "_");
-		str_appends(&file_name, cst_from_str(legislation.year));
-		str_append(&file_name, "_");
-		str_appends(&file_name, cst_from_str(legislation.number));
-		str_append(&file_name, "-");
-		str_append(&file_name, file_number_str);
-		str_append(&file_name, ".");
-		str_append(&file_name, format);
+		str_append(&file_name, legislation.type);
+		str_appends(&file_name, "_");
+		str_append(&file_name, legislation.year);
+		str_appends(&file_name, "_");
+		str_append(&file_name, legislation.number);
+		str_appends(&file_name, "-");
+		str_appends(&file_name, file_number_str);
+		str_appends(&file_name, ".");
+		str_appends(&file_name, format);
 
 		output_file = fopen(str_content(file_name), "r");
 		file_number += 1;

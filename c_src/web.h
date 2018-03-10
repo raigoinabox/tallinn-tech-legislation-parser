@@ -5,8 +5,8 @@
 
 #include <curl/curl.h>
 
-#include "safe_string.h"
 #include "legislation.h"
+#include "strings.h"
 
 struct page
 {
