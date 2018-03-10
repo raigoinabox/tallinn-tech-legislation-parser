@@ -9,13 +9,7 @@
 
 static void expand_d(struct string* string_p) {
 	struct string string = *string_p;
-
-	string.size *= 2;
-	string.content = realloc(string.content, string.size * sizeof(*string.content));
-	if (string.content == NULL)
-	{
-		abort();
-	}
+	_vec_expand(string.content);
 	*string_p = string;
 }
 
@@ -29,17 +23,25 @@ static void append(struct string* string_p, const char* text)
 	assert(string_p != NULL);
 	assert(text != NULL);
 
+	if (*text == '\0') {
+		return;
+	}
+
 	struct string string = *string_p;
+	vec_set(string.content, vec_length(string.content) - 1, *text);
+	string.length += 1;
+	text += 1;
+
 	while (*text != '\0')
 	{
-		if (string.size - 1 <= string.length) {
+		if (vec_size(string.content) - 1 <= vec_length(string.content)) {
 			string.expand(&string);
 		}
-		string.content[string.length] = *text;
+		vec_append(string.content, *text);
 		string.length += 1;
-		text++;
+		text += 1;
 	}
-	string.content[string.length] = '\0';
+	vec_append(string.content, '\0');
 
 	*string_p = string;
 }
@@ -50,21 +52,29 @@ static void append_c(struct string* string_p, const char* text) {
 	assert(false);
 }
 
-static void appendn(struct string* string_p, const char* text, int32_t count)
-{
+static void appendn(struct string* string_p, const char* text, int32_t count) {
 	assert(string_p != NULL);
 	assert(text != NULL);
+	if (*text == '\0' || count <= 0) {
+		return;
+	}
 
 	struct string string = *string_p;
-	for (int i = 0; i < count && *text != '\0'; i += 1)
-	{
-		if (string.size - 1 <= string.length) {
-					string.expand(&string);
-				}string.content[string.length] = *text;
+	vec_set(string.content, vec_length(string.content) - 1, *text);
+	string.length += 1;
+	text += 1;
+	count--;
+
+	while (*text != '\0' && 0 < count) {
+		if (vec_size(string.content) - 1 <= vec_length(string.content)) {
+			string.expand(&string);
+		}
+		vec_append(string.content, *text);
 		string.length += 1;
 		text += 1;
+		count--;
 	}
-	string.content[string.length] = '\0';
+	vec_append(string.content, '\0');
 
 	*string_p = string;
 }
@@ -89,9 +99,8 @@ static void str_free_c(struct string* string_p) {
 static void str_free_d(struct string* string_p) {
 	struct string string = *string_p;
 
-	free(string.content);
+	vec_free(string.content);
 	string.length = 0;
-	string.size = 0;
 
 	*string_p = string;
 }
@@ -99,39 +108,38 @@ static void str_free_d(struct string* string_p) {
 struct cstring cst_init(const char* text) {
 	size_t text_len = strlen(text);
 	struct cstring cstring;
-	vec_init_c(cstring.vector, text, text_len + 1);
-	cstring.string_length = text_len;
+	vec_init_c(cstring.content, text, text_len + 1);
+	cstring.length = text_len;
 	return cstring;
 }
 
 struct cstring cst_from_str(struct string string) {
 	struct cstring cstr;
-	vec_init_c(cstr.vector, string.content, string.size);
-	cstr.string_length = string.length;
+	vec_init_c(cstr.content, string.content.content, vec_length(string.content));
+	cstr.length = string.length;
 	return cstr;
 }
 
 const char* cst_content(struct cstring string) {
-	return vec_content(string.vector);
+	return vec_content(string.content);
 }
 
-size_t cst_length(struct cstring string) {
-	return string.string_length;
+int32_t cst_length(struct cstring string) {
+	return string.length;
 }
 
 struct string str_init_s(char* buffer, int32_t size) {
-	assert(0 < size);
-	buffer[0] = '\0';
-	return (struct string)
-	{
-		.content = buffer,
-		.size = size,
+	struct string string = {
 		.length = 0,
 		.append = append,
 		.appendn = appendn,
 		.expand = expand_s,
 		.free = str_free_s
 	};
+	vec_init_sta(string.content, buffer, size);
+	vec_append(string.content, '\0');
+
+	return string;
 }
 
 struct string str_init()
@@ -140,35 +148,31 @@ struct string str_init()
 }
 
 struct string str_init_ds(int32_t size) {
-	assert(0 < size);
-
 	struct string string =
 	{
-		.content = malloc_a(size, sizeof(*string.content)),
-		.size = size,
 		.length = 0,
 		.append = append,
 		.appendn = appendn,
 		.expand = expand_d,
 		.free = str_free_d
 	};
-	string.content[0] = '\0';
+	vec_init_siz(string.content, size);
+	vec_append(string.content, '\0');
 
 	return string;
 }
 
-struct string str_init_c(const char* text) {
+struct string str_init_c(char* text) {
 	size_t text_len = strlen(text);
 	struct string string =
 	{
-		.content = (char*) text,
-		.size = text_len + 1,
 		.length = text_len,
 		.append = append_c,
 		.appendn = appendn_c,
 		.expand = expand_s,
 		.free = str_free_c
 	};
+	vec_init_c(string.content, text, text_len + 1);
 
 	return string;
 }
@@ -182,7 +186,7 @@ int32_t str_length(struct string string) {
 }
 
 char* str_content(struct string string) {
-	return string.content;
+	return string.content.content;
 }
 
 void str_append(struct string* string, const char* content) {
@@ -226,7 +230,7 @@ void str_clear(struct string* string_p)
 {
 	struct string string = *string_p;
 	string.length = 0;
-	string.content[0] = '\0';
+	vec_set(string.content, 0, '\0');
 	*string_p = string;
 }
 

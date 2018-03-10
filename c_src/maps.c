@@ -30,7 +30,7 @@ struct map map_init(int32_t key_size, int32_t value_size,
 void map_free(struct map* map_p)
 {
 	struct map map = *map_p;
-	for (size_t i = 0; i < vec_length(map.map); i++)
+	for (int32_t i = 0; i < vec_length(map.map); i++)
 	{
 		struct map_entry map_entry = vec_elem(map.map, i);
 		free(map_entry.key);
@@ -44,7 +44,7 @@ void map_free(struct map* map_p)
 
 bool map_get_value_p(void** result, struct map map, void* key)
 {
-	for (size_t i = 0; i < vec_length(map.map); i++)
+	for (int32_t i = 0; i < vec_length(map.map); i++)
 	{
 		struct map_entry map_entr = vec_elem(map.map, i);
 		if (map.comparator(map_entr.key, key, map.type_comparator) == 0)

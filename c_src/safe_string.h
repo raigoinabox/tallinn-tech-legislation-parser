@@ -6,9 +6,7 @@
 #include "vectors.h"
 
 struct string {
-	vec_struct(, char) vector;
-	char* content;
-	int32_t size;
+	vec_struct(, char) content;
 	int32_t length;
 	void (*append)(struct string* string, const char* content);
 	void (*appendn)(struct string* string, const char* content, int32_t count);
@@ -17,20 +15,20 @@ struct string {
 };
 
 struct cstring {
-	vec_struct(, const char) vector;
-	size_t string_length;
+	vec_struct(, const char) content;
+	int32_t length;
 };
 struct cstring cst_init(const char* string);
 struct cstring cst_from_str(struct string string);
 const char* cst_content(struct cstring string);
-size_t cst_length(struct cstring string);
+int32_t cst_length(struct cstring string);
 
 // string on a stack, meaning a fixed size
 struct string str_init_s(char* buffer, int32_t size);
 // string on a heap, meaning a dynamic size
 struct string str_init();
 struct string str_init_ds(int32_t size);
-struct string str_init_c(const char* string);
+struct string str_init_c(char* string);
 void str_free(struct string* string);
 int32_t str_length(struct string string);
 char* str_content(struct string string);
