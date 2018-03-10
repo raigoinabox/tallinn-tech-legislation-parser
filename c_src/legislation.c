@@ -11,12 +11,14 @@
 
 #include "strings.h"
 
-struct leg_id leg_init(char* type, char* year, char* number) {
-	struct leg_id leg = {
-		.type = str_const(type),
-		.year = str_const(year),
-		.number = str_const(number)
-	};
-	return leg;
+struct leg_id leg_init(char* type, char* year, char* number)
+{
+    struct leg_id leg =
+    {
+        .type = str_const(type),
+        .year = str_const(year),
+        .number = str_const(number)
+    };
+    return leg;
 }
 

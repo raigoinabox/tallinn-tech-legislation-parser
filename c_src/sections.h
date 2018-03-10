@@ -7,8 +7,8 @@
 
 struct section
 {
-	char* id;
-	struct section_references references;
+    char* id;
+    struct section_references references;
 };
 
 vec_struct(sections, struct section);
