@@ -26,7 +26,7 @@ bool col_print_init_help(const char* program_name, struct arp_option_vec options
 	arp_print_options_help(options);
 	printf_a("\n");
 	printf_a("Possible commands are:\n");
-	for (size_t i = 0; i < vec_length(commands); i++) {
+	for (int32_t i = 0; i < vec_length(commands); i++) {
 		struct command command = vec_elem(commands, i);
 		struct string description = fit_text(command.description,
 				strlen(command.command) + 3);

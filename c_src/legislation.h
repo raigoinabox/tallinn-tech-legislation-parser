@@ -18,6 +18,13 @@ struct leg_id
 	struct string version_date;
 };
 
-struct leg_id leg_init(const char* type, char* year, char* number);
+struct cleg_id
+{
+	struct cstring type;
+	struct cstring year;
+	struct cstring number;
+};
+struct leg_id leg_init(char* type, char* year, char* number);
+struct cleg_id cleg_init(struct leg_id leg);
 
 #endif /* LEGISLATION_H_ */

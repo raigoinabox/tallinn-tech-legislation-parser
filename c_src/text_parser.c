@@ -236,7 +236,7 @@ ignore_references:
 void free_references_deep(struct section_references* references_p) {
 	struct section_references references = *references_p;
 
-	for (size_t i = 0; i < vec_length(references); i++) {
+	for (int32_t i = 0; i < vec_length(references); i++) {
 		free(vec_elem(references, i));
 	}
 
@@ -265,7 +265,7 @@ struct section_references get_references_from_text(const char* text) {
 	while (matches > 0) {
 		struct section_references refs_from_match = get_references_from_match(
 				text + ovector[0]);
-		for (size_t i = 0; i < vec_length(refs_from_match); i++) {
+		for (int32_t i = 0; i < vec_length(refs_from_match); i++) {
 			char* const reference = vec_elem(refs_from_match, i);
 			vec_append(result, reference);
 		}

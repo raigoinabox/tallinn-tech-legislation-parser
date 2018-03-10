@@ -16,7 +16,7 @@
 
 #define _vec_def_array_size 16
 
-#define _vec_size(vector) \
+#define vec_size(vector) \
 	(vector).vector_size
 
 #define _vec_elem_size(vector) \
@@ -26,21 +26,26 @@
 	(vector).content[index]
 
 #define _vec_init(vector, content, length, size) \
-	(vec_content(vector) = (content), \
+	(assert(0 < (size)), vec_content(vector) = (content), \
 			vec_length(vector) = (length), \
-			_vec_size(vector) = (size))
+			vec_size(vector) = (size))
 
 #define _vec_expand(vector) \
-	(_vec_size(vector) *= 2, \
+	(vec_size(vector) *= 2, \
 			vec_content(vector) = realloc_a(vec_content(vector), \
-					_vec_size(vector), _vec_elem_size(vector)))
+					vec_size(vector), _vec_elem_size(vector)))
+
+#define _assert_index(vector, index) \
+	(assert(0 <= (index)), \
+			assert((index) < vec_length(vector)))
+
 
 
 #define vec_struct(name, type) \
 	struct name { \
 		type* content; \
-		size_t vector_size; \
-		size_t length; \
+		int32_t vector_size; \
+		int32_t length; \
 	}
 
 #define vec_init(vector) \
@@ -49,14 +54,24 @@
 			0, \
 			_vec_def_array_size)
 
+#define vec_init_siz(vector, size) \
+	_vec_init(vector, \
+			malloc_a((size), _vec_elem_size(vector)), \
+			0, \
+			size)
+
+#define vec_init_sta(vector, buffer, size) \
+	_vec_init(vector, buffer, 0, size)
+
 #define vec_init_c(vector, content, length) \
 	_vec_init(vector, content, length, length)
+
 
 #define vec_free(vector) \
 	(free(vec_content(vector)), \
 	vec_content(vector) = NULL, \
 	vec_length(vector) = 0, \
-	_vec_size(vector) = 0)
+	vec_size(vector) = 0)
 
 #define vec_length(vector) \
 	(vector).length
@@ -65,20 +80,22 @@
 	(vector).content
 
 #define vec_elem(vector, index) \
-	(assert((index) < vec_length(vector)), _vec_elem(vector, index))
+	(_assert_index(vector, index), \
+			_vec_elem(vector, index))
 
 #define vec_set(vector, index, element) \
-	_vec_elem(vector, index) = element
+	(_assert_index(vector, index), \
+			_vec_elem(vector, index) = element)
 
 #define vec_append(vector, element) \
-	_vec_size(vector) <= vec_length(vector) \
+	vec_size(vector) <= vec_length(vector) \
 	? _vec_expand(vector) \
 	: 0, \
 	vec_length(vector) += 1, \
 	_vec_elem(vector, vec_length(vector) - 1) = element
 
 #define vec_remove(vector, index) \
-	(assert(0 <= (index)), assert((index) < vec_length(vector)), \
+	(_assert_index(vector, index), \
 			(index) < vec_length(vector) - 1 \
 			? memmove(vec_content(vector) + (index), \
 					vec_content(vector) + (index) + 1, \

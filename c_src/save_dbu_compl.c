@@ -55,13 +55,13 @@ static bool get_legislation_complexity(int32_t* result,
 	}
 	remove_foreign_sections(sections);
 
-	size_t sections_count = vec_length(sections);
+	int32_t sections_count = vec_length(sections);
 	if (sections_count == 0) {
 		sections_free_deep(&sections);
 		return false;
 	}
 	int32_t references_total = 0;
-	for (size_t i = 0; i < sections_count; i++) {
+	for (int32_t i = 0; i < sections_count; i++) {
 		struct section section = vec_elem(sections, i);
 		references_total += get_references_count(section);
 	}
@@ -75,24 +75,23 @@ static struct leg_complex_list get_norm_leg_complexities(
 		struct law_category_list law_categories, struct string date) {
 	struct leg_complex_list leg_complex_list;
 	vec_init(leg_complex_list);
-	for (size_t i = 0; i < vec_length(law_categories); i++) {
+	for (int32_t i = 0; i < vec_length(law_categories); i++) {
 		struct dbu_law_category law_category = vec_elem(
 				law_categories, i);
 
-		for (size_t j = 0; j < vec_length(law_category.laws); j++) {
+		for (int32_t j = 0; j < vec_length(law_category.laws); j++) {
 			struct leg_id leg_id = vec_elem(law_category.laws, j);
 			leg_id.version_date = date;
 			int32_t complexity;
 			bool success = get_legislation_complexity(&complexity, leg_id);
 			if (success) {
-				for (size_t j = 0;
+				for (int32_t j = 0;
 						j < vec_length(law_category.dbu_categories);
 						j++) {
 					const char* dbu_category = vec_elem(
 							law_category.dbu_categories, j);
-					struct leg_complex leg_complex = { .legislation = leg_id,
-							.dbu_category = dbu_category, .complexity =
-									complexity };
+					struct leg_complex leg_complex = { .dbu_category =
+							dbu_category, .complexity = complexity };
 					vec_append(leg_complex_list, leg_complex);
 				}
 			}
@@ -101,7 +100,7 @@ static struct leg_complex_list get_norm_leg_complexities(
 
 	int32_t max_complex = INT32_MIN;
 	int32_t min_complex = INT32_MAX;
-	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+	for (int32_t i = 0; i < vec_length(leg_complex_list); i++) {
 		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		if (leg_complex.complexity < min_complex) {
@@ -112,7 +111,7 @@ static struct leg_complex_list get_norm_leg_complexities(
 		}
 	}
 
-	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+	for (int32_t i = 0; i < vec_length(leg_complex_list); i++) {
 		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		leg_complex.complexity = ((leg_complex.complexity - min_complex) * 100)
@@ -128,7 +127,7 @@ static struct cat_compl_list get_norm_category_complexities(
 	struct leg_complex_list leg_complex_list = get_norm_leg_complexities(
 			law_categories, date);
 	struct cat_compl_list cat_compl_list = cat_compl_list_init(strcmp);
-	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+	for (int32_t i = 0; i < vec_length(leg_complex_list); i++) {
 		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		struct dbu_category_complexity complexity;

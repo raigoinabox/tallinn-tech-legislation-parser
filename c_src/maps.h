@@ -32,7 +32,7 @@ struct map {
 
 struct map_iterator {
 	struct map map;
-	size_t vector_index;
+	int32_t vector_index;
 };
 
 #define MAP_DECLARE(modifier, key_type, value_type, name) \

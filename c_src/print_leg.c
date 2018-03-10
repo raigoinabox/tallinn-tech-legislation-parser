@@ -191,7 +191,7 @@ static bool parse_args(struct print_args* result_p, const char* prog,
 		success = arp_next(&parser);
 	}
 
-	if (arp_get_arg_count(parser) < 1) {
+	if (!result.print_help && arp_get_arg_count(parser) < 1) {
 		printf_ea("%s: arguments required\n", prog);
 		return false;
 	}

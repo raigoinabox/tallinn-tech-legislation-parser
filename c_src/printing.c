@@ -48,13 +48,13 @@ void print_from_sections(FILE* file, struct sections connections,
 		const char* format) {
 
 	Agraph_t *graph = agopen("G", Agstrictdirected, NULL);
-	for (size_t i = 0; i < vec_length(connections); i++) {
+	for (int32_t i = 0; i < vec_length(connections); i++) {
 		struct section section = vec_elem(connections, i);
 		char* section_node_id = get_node_id(section.id);
 		Agnode_t *node = agnode(graph, section_node_id, 1);
 		free(section_node_id);
 		agsafeset(node, "label", section.id, "");
-		for (size_t ref_i = 0;
+		for (int32_t ref_i = 0;
 				ref_i < vec_length(section.references);
 				ref_i++) {
 			char* ref_node_id = get_node_id(get_reference(section, ref_i));
