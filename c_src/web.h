@@ -10,8 +10,8 @@
 
 struct page
 {
-	char* contents;
-	size_t contents_size;
+    char* contents;
+    size_t contents_size;
 };
 
 bool parse_url(struct leg_id* result, const char* url);

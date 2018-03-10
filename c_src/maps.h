@@ -16,23 +16,25 @@
 
 struct map_entry
 {
-	void* key;
-	void* value;
+    void* key;
+    void* value;
 };
 
 vec_struct(_map, struct map_entry);
 
-struct map {
-	struct _map map;
-	size_t key_size;
-	size_t value_size;
-	int (*comparator)(void* elem1, void* elem2, int (*type_comparator)());
-	int (*type_comparator)();
+struct map
+{
+    struct _map map;
+    size_t key_size;
+    size_t value_size;
+    int (*comparator)(void* elem1, void* elem2, int (*type_comparator)());
+    int (*type_comparator)();
 };
 
-struct map_iterator {
-	struct map map;
-	int32_t vector_index;
+struct map_iterator
+{
+    struct map map;
+    int32_t vector_index;
 };
 
 #define MAP_DECLARE(modifier, key_type, value_type, name) \
@@ -113,8 +115,8 @@ struct map_iterator {
 #define MAP_ITERATOR_SET(iterator, value) map_iterator_set(iterator.parent, &value)
 
 struct map map_init(int32_t key_size, int32_t value_size,
-		int (*comparator)(void* key1, void* key2, int (*type_comp)()),
-		int (*type_comparator)());
+                    int (*comparator)(void* key1, void* key2, int (*type_comp)()),
+                    int (*type_comparator)());
 void map_free(struct map* map_p);
 bool map_get_value_p(void** result, struct map map, void* key);
 void map_set(struct map* map_p, void* key, void* value);

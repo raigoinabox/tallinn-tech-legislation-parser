@@ -5,10 +5,11 @@
 
 #include "vectors.h"
 
-struct string {
-	vec_struct(, char) content;
-	int32_t length;
-	enum { DYNAMIC, STATIC, CONSTANT } type;
+struct string
+{
+    vec_struct(, char) content;
+    int32_t length;
+    enum { DYNAMIC, STATIC, CONSTANT } type;
 };
 
 struct string str_const(const char* string);

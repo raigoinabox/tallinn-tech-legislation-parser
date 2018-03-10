@@ -14,7 +14,7 @@
 #include "sections.h"
 
 bool get_sections_from_legislation(struct sections* result,
-		struct leg_id legislation);
+                                   struct leg_id legislation);
 
 struct string fit_text(const char* text, int32_t prefix_length);
 

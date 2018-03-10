@@ -13,11 +13,12 @@
 
 #include "strings.h"
 
-struct complexity_result_dto {
-	struct string country;
-	int32_t year;
-	struct string dbu_category;
-	int32_t complexity;
+struct complexity_result_dto
+{
+    struct string country;
+    int32_t year;
+    struct string dbu_category;
+    int32_t complexity;
 };
 
 void delete_results(sqlite3* db_conn);

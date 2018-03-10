@@ -13,6 +13,6 @@
 #include "arg_parsing.h"
 
 bool save_dbu_compl(const char* prog, const char* command,
-		struct arp_parser parser);
+                    struct arp_parser parser);
 
 #endif /* SAVE_DBU_COMPL_H_ */
