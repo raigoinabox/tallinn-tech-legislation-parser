@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "command_line.h"
 #include "database.h"
 #include "doing_business.h"
 #include "legislation.h"
@@ -30,8 +31,7 @@ struct leg_complex {
 	int32_t complexity;
 };
 
-VECTOR_DECLARE(static, leg_complex_list, struct leg_complex)
-VECTOR_DEFINE(static, leg_complex_list, struct leg_complex)
+vec_struct(leg_complex_list, struct leg_complex);
 
 MAP_DECLARE(, const char*, int32_t, cat_comps)
 MAP_DEFINE(, const char*, int32_t, cat_comps)
@@ -55,14 +55,14 @@ static bool get_legislation_complexity(int32_t* result,
 	}
 	remove_foreign_sections(sections);
 
-	int32_t sections_count = sections_length(sections);
+	size_t sections_count = vec_length(sections);
 	if (sections_count == 0) {
 		sections_free_deep(&sections);
 		return false;
 	}
 	int32_t references_total = 0;
-	for (int i = 0; i < sections_count; i++) {
-		struct section section = sections_get(sections, i);
+	for (size_t i = 0; i < sections_count; i++) {
+		struct section section = vec_elem(sections, i);
 		references_total += get_references_count(section);
 	}
 	sections_free_deep(&sections);
@@ -73,26 +73,27 @@ static bool get_legislation_complexity(int32_t* result,
 
 static struct leg_complex_list get_norm_leg_complexities(
 		struct law_category_list law_categories, struct string date) {
-	struct leg_complex_list leg_complex_list = leg_complex_list_init();
-	for (int i = 0; i < law_category_list_length(law_categories); i++) {
-		struct dbu_law_category law_category = law_category_list_get(
+	struct leg_complex_list leg_complex_list;
+	vec_init(leg_complex_list);
+	for (size_t i = 0; i < vec_length(law_categories); i++) {
+		struct dbu_law_category law_category = vec_elem(
 				law_categories, i);
 
-		for (int j = 0; j < law_list_length(law_category.laws); j++) {
-			struct leg_id leg_id = law_list_get(law_category.laws, j);
+		for (size_t j = 0; j < vec_length(law_category.laws); j++) {
+			struct leg_id leg_id = vec_elem(law_category.laws, j);
 			leg_id.version_date = date;
 			int32_t complexity;
 			bool success = get_legislation_complexity(&complexity, leg_id);
 			if (success) {
-				for (int j = 0;
-						j < string_list_length(law_category.dbu_categories);
+				for (size_t j = 0;
+						j < vec_length(law_category.dbu_categories);
 						j++) {
-					const char* dbu_category = string_list_get(
+					const char* dbu_category = vec_elem(
 							law_category.dbu_categories, j);
 					struct leg_complex leg_complex = { .legislation = leg_id,
 							.dbu_category = dbu_category, .complexity =
 									complexity };
-					leg_complex_list_append(&leg_complex_list, leg_complex);
+					vec_append(leg_complex_list, leg_complex);
 				}
 			}
 		}
@@ -100,8 +101,8 @@ static struct leg_complex_list get_norm_leg_complexities(
 
 	int32_t max_complex = INT32_MIN;
 	int32_t min_complex = INT32_MAX;
-	for (int i = 0; i < leg_complex_list_length(leg_complex_list); i++) {
-		struct leg_complex leg_complex = leg_complex_list_get(leg_complex_list,
+	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		if (leg_complex.complexity < min_complex) {
 			min_complex = leg_complex.complexity;
@@ -111,12 +112,12 @@ static struct leg_complex_list get_norm_leg_complexities(
 		}
 	}
 
-	for (int i = 0; i < leg_complex_list_length(leg_complex_list); i++) {
-		struct leg_complex leg_complex = leg_complex_list_get(leg_complex_list,
+	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		leg_complex.complexity = ((leg_complex.complexity - min_complex) * 100)
 				/ (max_complex - min_complex);
-		leg_complex_list_set(&leg_complex_list, i, leg_complex);
+		vec_set(leg_complex_list, i, leg_complex);
 	}
 
 	return leg_complex_list;
@@ -127,8 +128,8 @@ static struct cat_compl_list get_norm_category_complexities(
 	struct leg_complex_list leg_complex_list = get_norm_leg_complexities(
 			law_categories, date);
 	struct cat_compl_list cat_compl_list = cat_compl_list_init(strcmp);
-	for (int i = 0; i < leg_complex_list_length(leg_complex_list); i++) {
-		struct leg_complex leg_complex = leg_complex_list_get(leg_complex_list,
+	for (size_t i = 0; i < vec_length(leg_complex_list); i++) {
+		struct leg_complex leg_complex = vec_elem(leg_complex_list,
 				i);
 		struct dbu_category_complexity complexity;
 		if (cat_compl_list_get(&complexity, cat_compl_list,
@@ -155,7 +156,7 @@ static struct cat_compl_list get_norm_category_complexities(
 		MAP_ITERATOR_SET(&iterator, complexity);
 	}
 
-	leg_complex_list_free(&leg_complex_list);
+	vec_free(leg_complex_list);
 
 	return cat_compl_list;
 }
@@ -184,8 +185,8 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 	while (cat_compl_list_iterator_has_next(iterator)) {
 		cat_compl_list_iterator_next(&iterator);
 		struct complexity_result_dto result =
-				{ .country = str_init_c("GB"), .year = year, .dbu_category =
-						str_init_c(cat_compl_list_iterator_get_key(iterator)),
+				{ .country = cst_init("GB"), .year = year, .dbu_category =
+						cst_init(cat_compl_list_iterator_get_key(iterator)),
 						.complexity = cat_compl_list_iterator_get_value(
 								iterator).complexity_total };
 		insert_result(db_conn, result);
@@ -193,14 +194,17 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 }
 
 static struct arp_option_vec get_options() {
-	struct arp_option_vec options = arp_option_vec_init();
+	struct arp_option_vec options;
+	vec_init(options);
 	struct arp_option option = { .short_form = 'h', .long_form = "help",
 			.help_text = "Print this help message.", .argument_name = NULL };
-	arp_option_vec_append(&options, option);
+	vec_append(options, option);
 	return options;
 }
 
-bool save_dbu_compl(struct arp_parser parser) {
+bool save_dbu_compl(const char* prog, const char* command,
+		struct arp_parser parser) {
+
 	struct arp_option_vec options = get_options();
 	parser = arp_get_parser_from_parser(parser, options);
 
@@ -223,11 +227,15 @@ bool save_dbu_compl(struct arp_parser parser) {
 		is_success = arp_next(&parser);
 	}
 	if (!is_success) {
+		vec_free(options);
 		return false;
 	}
 
 	if (print_help) {
-		arp_print_options_help(options);
+		if (!col_print_command_help(prog, command, options, "")) {
+			vec_free(options);
+			return false;
+		}
 	} else {
 		dbu_init();
 
@@ -252,5 +260,6 @@ bool save_dbu_compl(struct arp_parser parser) {
 		db_close_conn(db_conn);
 	}
 
+	vec_free(options);
 	return true;
 }

@@ -18,7 +18,7 @@ void db_close_conn(sqlite3* conn);
 sqlite3_stmt* db_prepare_stmt(sqlite3* db_conn, const char* sql);
 void db_close_stmt(sqlite3_stmt* stmt);
 void db_bind_text(sqlite3_stmt* statement, int index, const char* text);
-void db_bind_text2(sqlite3_stmt* statement, int index, struct string text);
+void db_bind_text2(sqlite3_stmt* statement, int index, struct cstring text);
 void db_bind_int(sqlite3_stmt* statement, int index, int integer);
 void db_step(bool* is_row, sqlite3_stmt* statement);
 

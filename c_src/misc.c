@@ -119,7 +119,7 @@ static void sax_end_element(void* user_data, const xmlChar* name) {
 
 		struct section section = { .id = (char*) state.section_number,
 				.references = references };
-		sections_append(&state.result, section);
+		vec_append(state.result, section);
 		str_free(&state.section_text);
 	}
 
@@ -172,11 +172,12 @@ static xmlSAXHandler sax = { .startElement = sax_start_element, .endElement =
 
 static bool get_sections_from_page(struct sections* result, struct page page) {
 	struct SAX_state sax_state =
-			{ .result = sections_init(), .section_depth = 0 };
+			{ .section_depth = 0 };
+	vec_init(sax_state.result);
 
 	if (xmlSAXUserParseMemory(&sax, &sax_state, page.contents,
 			page.contents_size) != 0) {
-		sections_free(&sax_state.result);
+		vec_free(sax_state.result);
 		return false;
 	}
 	*result = sax_state.result;
@@ -263,6 +264,6 @@ struct string fit_text(const char* text, int32_t prefix_length) {
 	}
 
 	struct string help_text = str_init();
-	str_appendf(&help_text, "%s  %s", help_indent, split_text.content);
+	str_appendf(&help_text, "%s  %s", help_indent, str_content(split_text));
 	return help_text;
 }

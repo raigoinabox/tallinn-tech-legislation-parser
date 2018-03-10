@@ -14,9 +14,9 @@
 #include "safe_string.h"
 
 struct complexity_result_dto {
-	struct string country;
+	struct cstring country;
 	int32_t year;
-	struct string dbu_category;
+	struct cstring dbu_category;
 	int32_t complexity;
 };
 

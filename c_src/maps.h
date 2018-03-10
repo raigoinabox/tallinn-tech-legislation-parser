@@ -20,7 +20,7 @@ struct map_entry
 	void* value;
 };
 
-VECTOR_DECLARE(, _map, struct map_entry)
+vec_struct(_map, struct map_entry);
 
 struct map {
 	struct _map map;
@@ -32,7 +32,7 @@ struct map {
 
 struct map_iterator {
 	struct map map;
-	int32_t vector_index;
+	size_t vector_index;
 };
 
 #define MAP_DECLARE(modifier, key_type, value_type, name) \

@@ -8,87 +8,83 @@
 #ifndef VECTORS_H_
 #define VECTORS_H_
 
-#include <stdbool.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 
-#define STRINGIFY(arg) #arg
+#include "util.h"
 
-#define VECTOR_STRUCT(type, name) \
-		struct name { type* content, size_t vector_size, size_t vector_length };
+#define _vec_def_array_size 16
 
-#define VECTOR_DECLARE(modifier, name, type) \
-	_Pragma(STRINGIFY(GCC diagnostic ignored "-Wunused-function")) \
+#define _vec_size(vector) \
+	(vector).vector_size
+
+#define _vec_elem_size(vector) \
+	sizeof(*vec_content(vector))
+
+#define _vec_elem(vector, index) \
+	(vector).content[index]
+
+#define _vec_init(vector, content, length, size) \
+	(vec_content(vector) = (content), \
+			vec_length(vector) = (length), \
+			_vec_size(vector) = (size))
+
+#define _vec_expand(vector) \
+	(_vec_size(vector) *= 2, \
+			vec_content(vector) = realloc_a(vec_content(vector), \
+					_vec_size(vector), _vec_elem_size(vector)))
+
+
+#define vec_struct(name, type) \
 	struct name { \
-		struct vector parent; \
-	}; \
-	modifier struct name name ## _init(); \
-	modifier void name ## _free(struct name* name); \
-	modifier type name ## _get(struct name name, int32_t index); \
-	modifier void name ## _set(struct name* name, int32_t index, type element); \
-	modifier void name ## _append(struct name* name, type element); \
-	modifier void name ## _remove(struct name* name, int32_t index); \
-	modifier int32_t name ## _length(struct name name); \
-	modifier bool name ## _contains(struct name name, type element, \
-			int (*comparator)(type element1, type element2));
-
-#define VECTOR_DEFINE(modifier, name, type) \
-	_Pragma(STRINGIFY(GCC diagnostic ignored "-Wunused-function")) \
-	static int _vector_ ## name ## _compare(void* element1, void* element2, \
-			int (*type_comparator)(type element1, type element2)) \
-	{ \
-		return type_comparator(*(type*)element1, *(type*)element2); \
-	} \
-	modifier struct name name ## _init() \
-	{ \
-		return (struct name) { vector_init(sizeof(type)) }; \
-	} \
-	modifier void name ## _free(struct name* name) { \
-		vector_free(&name->parent); \
-	} \
-	modifier type name ## _get(struct name name, int32_t index) \
-	{ \
-		return * (type*) vector_get_element_p(name.parent, index); \
-	} \
-	modifier void name ## _set(struct name* name, int32_t index, type element) \
-	{ \
-		vector_set(&name->parent, index, &element); \
-	} \
-	modifier void name ## _append(struct name* name, type element) \
-	{ \
-		vector_append(&name->parent, &element); \
-	} \
-	modifier void name ## _remove(struct name* name, int32_t index) \
-	{ \
-		vector_remove(&name->parent, index); \
-	} \
-	modifier int32_t name ## _length(struct name name) \
-	{ \
-		return vector_length(name.parent); \
-	} \
-	modifier bool name ## _contains(struct name name, type element, \
-			int (*comparator)(type element1, type element2)) \
-	{ \
-		return vector_contains(name.parent, &element, comparator, \
-				_vector_ ## name ## _compare); \
+		type* content; \
+		size_t vector_size; \
+		size_t length; \
 	}
 
-struct vector {
-	void* content;
-	int32_t vector_size;
-	int32_t length;
-	int32_t elem_size;
-};
+#define vec_init(vector) \
+	_vec_init(vector, \
+			malloc_a((_vec_def_array_size), _vec_elem_size(vector)), \
+			0, \
+			_vec_def_array_size)
 
-struct vector vector_init_size(int32_t size, int32_t elem_size);
-struct vector vector_init_size2(int32_t elem_size, int32_t size);
-struct vector vector_init(int32_t elem_size);
-void vector_free(struct vector* vector_p);
-void* vector_get_element_p(struct vector vector, int32_t index);
-void vector_set(struct vector* vector_p, int32_t index, void* element);
-void vector_append(struct vector* vector_p, void* element);
-void vector_remove(struct vector* vector_p, int32_t index);
-int32_t vector_length(struct vector vector);
-bool vector_contains(struct vector vector, void* element, int (*type_comparator)(),
-		int (*comparator)(void* element1, void* element2, int (*type_comparator)()));
+#define vec_init_c(vector, content, length) \
+	_vec_init(vector, content, length, length)
+
+#define vec_free(vector) \
+	(free(vec_content(vector)), \
+	vec_content(vector) = NULL, \
+	vec_length(vector) = 0, \
+	_vec_size(vector) = 0)
+
+#define vec_length(vector) \
+	(vector).length
+
+#define vec_content(vector) \
+	(vector).content
+
+#define vec_elem(vector, index) \
+	(assert((index) < vec_length(vector)), _vec_elem(vector, index))
+
+#define vec_set(vector, index, element) \
+	_vec_elem(vector, index) = element
+
+#define vec_append(vector, element) \
+	_vec_size(vector) <= vec_length(vector) \
+	? _vec_expand(vector) \
+	: 0, \
+	vec_length(vector) += 1, \
+	_vec_elem(vector, vec_length(vector) - 1) = element
+
+#define vec_remove(vector, index) \
+	(assert(0 <= (index)), assert((index) < vec_length(vector)), \
+			(index) < vec_length(vector) - 1 \
+			? memmove(vec_content(vector) + (index), \
+					vec_content(vector) + (index) + 1, \
+					sizeof(*vec_content(vector)) \
+					* (vec_length(vector) - (index) - 1)) \
+			: 0, \
+			vec_length(vector)--)
 
 #endif /* VECTORS_H_ */

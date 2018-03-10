@@ -53,8 +53,8 @@ void db_bind_text(sqlite3_stmt* statement, int index, const char* text) {
 	}
 }
 
-void db_bind_text2(sqlite3_stmt* statement, int index, struct string text) {
-	int return_code = sqlite3_bind_text(statement, index, str_content(text), -1,
+void db_bind_text2(sqlite3_stmt* statement, int index, struct cstring text) {
+	int return_code = sqlite3_bind_text(statement, index, cst_content(text), -1,
 	SQLITE_STATIC);
 	if (return_code != SQLITE_OK) {
 		abort();
