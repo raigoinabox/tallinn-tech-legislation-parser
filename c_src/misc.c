@@ -21,7 +21,7 @@
 #include <string.h>
 
 #include "printing.h"
-#include "safe_string.h"
+#include "strings.h"
 #include "text_parser.h"
 #include "util.h"
 #include "web.h"
@@ -259,7 +259,7 @@ struct string fit_text(const char* text, int32_t prefix_length) {
 			break;
 		}
 
-		str_append(&split_text, "\n                    ");
+		str_appends(&split_text, "\n                    ");
 		text_read += 1;
 	}
 

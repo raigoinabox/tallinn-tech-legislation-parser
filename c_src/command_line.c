@@ -8,11 +8,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include "safe_string.h"
 #include "vectors.h"
 #include "arg_parsing.h"
 #include "misc.h"
 #include "printing.h"
+#include "strings.h"
 #include "util.h"
 
 bool col_print_init_help(const char* program_name, struct arp_option_vec options,
