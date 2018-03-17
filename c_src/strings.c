@@ -6,7 +6,7 @@
 #include "strings.h"
 #include "util.h"
 
-struct string str_const(const char* text)
+struct string str_c(const char* text)
 {
     assert(text != NULL);
     size_t text_len = strlen(text);
@@ -28,6 +28,11 @@ char* str_content(struct string string)
     return string.content.content;
 }
 
+bool str_is_empty(struct string string)
+{
+    return str_length(string) <= 0;
+}
+
 /*
  * DYNAMIC or STATIC
  */
@@ -44,12 +49,6 @@ static void str_append_char(struct string* string_p, char character)
     assert(character != '\0');
     struct string string = *string_p;
     assert(string.type == DYNAMIC || string.type == STATIC);
-
-    // TODO
-    if (character == '\0')
-    {
-        return;
-    }
 
     if (vec_size(string.content) <= vec_length(string.content))
     {
@@ -77,13 +76,13 @@ void str_append(struct string* string_p, struct string text)
 {
     for (int32_t i = 0; i < str_length(text); i++)
     {
-        str_append_char(string_p, *str_content(text));
+        str_append_char(string_p, str_content(text)[i]);
     }
 }
 
 void str_appends(struct string* string, const char* text)
 {
-    str_append(string, str_const(text));
+    str_append(string, str_c(text));
 }
 
 void str_appendn(struct string* string_p, const char* text, int32_t count)

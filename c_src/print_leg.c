@@ -9,7 +9,6 @@
 
 #include <asm-generic/errno-base.h>
 #include <errno.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +19,7 @@
 #include "printing.h"
 #include "sections.h"
 #include "strings.h"
+#include "vectors.h"
 #include "web.h"
 
 struct run_info
@@ -37,6 +37,7 @@ struct print_args
     const char* format;
     bool print_help;
     bool debug;
+    struct string version_date;
 };
 
 static bool get_default_file(FILE** result, struct leg_id legislation,
@@ -106,6 +107,9 @@ static bool process_args(struct run_info* result, struct print_args args)
         fprintf(stderr, "Url is malformed.\n");
         return false;
     }
+    if (!str_is_empty(args.version_date)) {
+        legislation.version_date = args.version_date;
+    }
     run_info.legislation = legislation;
 
     run_info.format = args.format;
@@ -172,6 +176,11 @@ static struct arp_option_vec get_options()
     option.help_text = "Debug mode. Shows false-positives.";
     option.argument_name = NULL;
     vec_append(options, option);
+    option.short_form = 'd';
+    option.long_form = "date";
+    option.help_text = "Get legislation from that date. Format is yyyy-mm-dd.";
+    option.argument_name = "DATE";
+    vec_append(options, option);
     return options;
 }
 
@@ -198,6 +207,9 @@ static bool parse_args(struct print_args* result_p, const char* prog,
                 break;
             case 'g':
                 result.debug = true;
+                break;
+            case 'd':
+                result.version_date = str_c(arp_get_option_arg(parser));
                 break;
             default:
                 col_print_command_help(prog, command, options, argument_text);
@@ -260,7 +272,7 @@ bool print_leg(const char* prog, const char* command,
             return false;
         }
 
-        struct sections sections;
+        struct section_vec sections;
         if (!get_sections_from_legislation(&sections,
                                            run_info.legislation))
         {
@@ -272,7 +284,7 @@ bool print_leg(const char* prog, const char* command,
         }
         remove_single_sections(&sections);
 
-        print_from_sections(run_info.output_file, sections, run_info.format);
+        print_graph(run_info.output_file, sections, run_info.format);
 
         sections_free_deep(&sections);
     }

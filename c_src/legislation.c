@@ -15,9 +15,9 @@ struct leg_id leg_init(char* type, char* year, char* number)
 {
     struct leg_id leg =
     {
-        .type = str_const(type),
-        .year = str_const(year),
-        .number = str_const(number)
+        .type = str_c(type),
+        .year = str_c(year),
+        .number = str_c(number)
     };
     return leg;
 }

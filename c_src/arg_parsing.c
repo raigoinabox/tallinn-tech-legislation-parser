@@ -244,7 +244,6 @@ const char* arp_get_arg(struct arp_parser parser)
 
 void arp_print_options_help(struct arp_option_vec options)
 {
-
     for (int32_t i = 0; i < vec_length(options); i++)
     {
         struct arp_option option = vec_elem(options, i);
@@ -263,16 +262,16 @@ void arp_print_options_help(struct arp_option_vec options)
             assert(print_result >= 0);
         }
 
-        struct string prefix = str_init();
-        str_appendf(&prefix, "  -%c, --%-10s", option.short_form,
+        struct string result = str_init();
+        str_appendf(&result, "  -%c, --%-10s", option.short_form,
                     mod_long_form);
 
         struct string help_text = fit_text(option.help_text,
-                                           str_length(prefix));
+                                           str_length(result));
+        str_append(&result, help_text);
+        println_a(result);
 
-        printf_a("%s%s\n", str_content(prefix), str_content(help_text));
-        str_free(&prefix);
+        str_free(&result);
         str_free(&help_text);
     }
-
 }

@@ -51,7 +51,7 @@ static bool get_legislation_complexity(int32_t* result,
 {
     assert(result != NULL);
 
-    struct sections sections;
+    struct section_vec sections;
     if (!get_sections_from_legislation(&sections, legislation))
     {
 //		fprintf_a(stderr, "get_sections_from_legislation failed. \n");
@@ -211,8 +211,8 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
         cat_compl_list_iterator_next(&iterator);
         struct complexity_result_dto result =
         {
-            .country = str_const("GB"), .year = year, .dbu_category =
-            str_const(cat_compl_list_iterator_get_key(iterator)),
+            .country = str_c("GB"), .year = year, .dbu_category =
+            str_c(cat_compl_list_iterator_get_key(iterator)),
             .complexity = cat_compl_list_iterator_get_value(
                 iterator).complexity_total
         };
@@ -255,7 +255,7 @@ bool save_dbu_compl(const char* prog, const char* command,
         }
         else
         {
-            printf_ea("This command takes no arguments.\n");
+            printf_ea("%s: this command takes no arguments.\n", prog);
             return false;
         }
 
@@ -283,10 +283,8 @@ bool save_dbu_compl(const char* prog, const char* command,
         delete_results(db_conn);
         for (int i = 2004; i <= 2018; i++)
         {
-            char buffer[20];
-            sprintf(buffer, "%d-%02d-%02d", i, 1, 1);
             struct string date = str_init();
-            str_appends(&date, buffer);
+            str_appendf(&date, "%d-%02d-%02d", i, 1, 1);
 
             const struct law_category_list law_categories =
                 get_english_law_categories();
