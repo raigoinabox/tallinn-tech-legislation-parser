@@ -68,7 +68,7 @@ static const xmlChar* xml_from_char(const char* text)
 
 struct SAX_state
 {
-    struct sections result;
+    struct section_vec result;
     int section_depth;
     const xmlChar* section_number;
     struct string section_text;
@@ -195,7 +195,7 @@ static xmlSAXHandler sax = { .startElement = sax_start_element, .endElement =
                              .error = sax_error, .fatalError = sax_fatal_error
                            };
 
-static bool get_sections_from_page(struct sections* result, struct page page)
+static bool get_sections_from_page(struct section_vec* result, struct page page)
 {
     struct SAX_state sax_state =
     { .section_depth = 0 };
@@ -228,7 +228,7 @@ static int32_t find_space(const char* string)
     return -1;
 }
 
-bool get_sections_from_legislation(struct sections* result,
+bool get_sections_from_legislation(struct section_vec* result,
                                    struct leg_id legislation)
 {
     struct string url = get_api_url(legislation);

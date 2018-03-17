@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool is_section_connected(struct sections sections,
+static bool is_section_connected(struct section_vec sections,
                                  struct section section)
 {
     if (has_section_references(section))
@@ -40,9 +40,9 @@ static void free_section(struct section* section_p)
     *section_p = section;
 }
 
-void sections_free_deep(struct sections* array_p)
+void sections_free_deep(struct section_vec* array_p)
 {
-    struct sections array = *array_p;
+    struct section_vec array = *array_p;
 
     for (int32_t i = 0; i < vec_length(array); i++)
     {
@@ -70,7 +70,7 @@ _Bool has_section_references(struct section section)
     return vec_length(section.references) > 0;
 }
 
-void remove_foreign_sections(struct sections sections)
+void remove_foreign_sections(struct section_vec sections)
 {
     for (int32_t section_idx = 0; section_idx < vec_length(sections);
             section_idx++)
@@ -101,9 +101,9 @@ void remove_foreign_sections(struct sections sections)
     }
 }
 
-void remove_single_sections(struct sections* sections_p)
+void remove_single_sections(struct section_vec* sections_p)
 {
-    struct sections sections = *sections_p;
+    struct section_vec sections = *sections_p;
     for (int32_t test_section_idx = 0;
             test_section_idx < vec_length(sections); test_section_idx++)
     {

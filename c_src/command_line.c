@@ -25,16 +25,20 @@ bool col_print_init_help(const char* program_name,
     {
         return false;
     }
-    printf_a("\n");
+    println_a(str_c(""));
+    printeln_a();
     arp_print_options_help(options);
-    printf_a("\n");
-    printf_a("Possible commands are:\n");
+    printeln_a();
+    println_a(str_c("Possible commands are:"));
     for (int32_t i = 0; i < vec_length(commands); i++)
     {
         struct command command = vec_elem(commands, i);
         struct string description = fit_text(command.description,
                                              strlen(command.command) + 3);
-        printf_a("   %s%s\n", command.command, str_content(description));
+        struct string result = str_init();
+        str_appendf(&result, "   %s%s\n", command.command, str_content(description));
+        println_a(result);
+        str_free(&result);
         str_free(&description);
     }
     printf_a("\n");

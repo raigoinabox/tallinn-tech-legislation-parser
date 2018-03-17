@@ -5,9 +5,11 @@
 
 #include "arg_parsing.h"
 #include "command_line.h"
+#include "convert_csv.h"
 #include "print_leg.h"
 #include "printing.h"
 #include "save_dbu_compl.h"
+#include "vectors.h"
 
 struct global_args
 {
@@ -79,6 +81,9 @@ static struct command_vec get_commands()
                           " belong into Doing Business report topics"
                           " into sqlite database data.db table complexity_results.";
     vec_append(commands, command);
+    command.command = "conv-csv";
+    command.description = "Convert a csv into a dot format graph.";
+//    vec_append(commands, command);
     return commands;
 }
 
@@ -123,6 +128,10 @@ int main(int argc, char const* argv[])
         else if (strcmp("save-dbu-compl", result.command) == 0)
         {
             success = save_dbu_compl(argv[0], result.command, parser);
+        }
+        else if (strcmp("conv-csv", result.command) == 0)
+        {
+            success = convert_csv(argv[0], result.command, parser);
         }
         else
         {

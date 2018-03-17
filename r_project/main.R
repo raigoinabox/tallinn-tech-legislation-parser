@@ -2,14 +2,8 @@
 
 library(DBI)
 
-genTest <- function(result) {
-  test <- function(row) {
-    print(row)
-  }
-}
-
 main <- function() {
-  conn <- dbConnect(RSQLite::SQLite(), "../meson-build/data.db")
+  conn <- dbConnect(RSQLite::SQLite(), "../data.db")
   results <- dbGetQuery(
     conn,
     paste(
