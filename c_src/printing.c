@@ -11,14 +11,10 @@
 #include "util.h"
 #include "vectors.h"
 
-static char* get_node_id(char* section_number)
+static struct string get_node_id(struct string section_number)
 {
-    char* node_id = malloc_a(strlen(section_number) + 20, sizeof(char));
-    int error = snprintf(node_id, 100, "section_%s", section_number);
-    if (error < 0)
-    {
-        abort();
-    }
+    struct string node_id = str_init();
+    str_appendf(&node_id, "section_%s", str_content(section_number));
     return node_id;
 }
 
@@ -43,8 +39,8 @@ static void print_csv_format(FILE* file, struct section_vec connections)
         struct section section = vec_elem(connections, i);
         for (int32_t j = 0; j < vec_length(section.references); j++)
         {
-            char* reference = vec_elem(section.references, j);
-            fprintf_a(file, "%s;%s\n", section.id, reference);
+            struct string reference = vec_elem(section.references, j);
+            fprintf_a(file, "%s;%s\n", section.id, str_content(reference));
         }
     }
 }
@@ -94,7 +90,7 @@ int printf_ea(const char* template, ...)
 }
 
 void print_graph(FILE* file, struct section_vec connections,
-                         const char* format)
+                 const char* format)
 {
     if (strcmp(format, "csv") == 0)
     {
@@ -106,21 +102,21 @@ void print_graph(FILE* file, struct section_vec connections,
         for (int32_t i = 0; i < vec_length(connections); i++)
         {
             struct section section = vec_elem(connections, i);
-            char* section_node_id = get_node_id(section.id);
-            Agnode_t *node = agnode(graph, section_node_id, 1);
-            free(section_node_id);
+            struct string section_node_id = get_node_id(str_c(section.id));
+            Agnode_t *node = agnode(graph, str_content(section_node_id), 1);
+            str_free(&section_node_id);
             agsafeset(node, "label", section.id, "");
             for (int32_t ref_i = 0;
                     ref_i < vec_length(section.references);
                     ref_i++)
             {
-                char* ref_node_id = get_node_id(get_reference(section, ref_i));
-                Agnode_t *ref_node = agnode(graph, ref_node_id, 1);
+                struct string ref_node_id = get_node_id(get_reference(section, ref_i));
+                Agnode_t *ref_node = agnode(graph, str_content(ref_node_id), 1);
                 if (ref_node == NULL)
                 {
                     abort();
                 }
-                free(ref_node_id);
+                str_free(&ref_node_id);
                 agedge(graph, node, ref_node, NULL, 1);
             }
         }

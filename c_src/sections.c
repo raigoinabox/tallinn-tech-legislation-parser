@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "strings.h"
+
 static bool is_section_connected(struct section_vec sections,
                                  struct section section)
 {
@@ -19,7 +21,7 @@ static bool is_section_connected(struct section_vec sections,
         for (int32_t ref_idx = 0; ref_idx < get_references_count(test_section);
                 ref_idx++)
         {
-            if (strcmp(get_reference(test_section, ref_idx), section.id) == 0)
+            if (strcmp(str_content(get_reference(test_section, ref_idx)), section.id) == 0)
             {
                 return 1;
             }
@@ -60,7 +62,7 @@ int32_t get_references_count(struct section section)
     return vec_length(section.references);
 }
 
-char* get_reference(struct section section, int32_t index)
+struct string get_reference(struct section section, int32_t index)
 {
     return vec_elem(section.references, index);
 }
@@ -78,12 +80,12 @@ void remove_foreign_sections(struct section_vec sections)
         struct section section = vec_elem(sections, section_idx);
         for (int32_t ref_i = 0; ref_i < get_references_count(section); ref_i++)
         {
-            char const* const reference = get_reference(section, ref_i);
+            struct string reference = get_reference(section, ref_i);
 
             bool ref_found = 0;
             for (int32_t i = 0; i < vec_length(sections); i++)
             {
-                if (strcmp(vec_elem(sections, i).id, reference) == 0)
+                if (strcmp(vec_elem(sections, i).id, str_content(reference)) == 0)
                 {
                     ref_found = 1;
                     break;
@@ -91,10 +93,9 @@ void remove_foreign_sections(struct section_vec sections)
             }
             if (!ref_found)
             {
-                char* reference = get_reference(section, ref_i);
+                assert(false);
                 vec_remove(section.references, ref_i);
                 ref_i--;
-                free(reference);
             }
         }
         vec_set(sections, section_idx, section);

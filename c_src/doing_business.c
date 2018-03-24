@@ -11,18 +11,18 @@
 
 static struct law_category_list law_categories;
 
-static struct string_list get_banking_and_credit_laws_categories()
+static struct cstring_vec get_banking_and_credit_laws_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Getting Credit");
     vec_append(categories, "Protecting Investors");
     return categories;
 }
 
-static struct law_list get_banking_and_credit_laws()
+static struct law_vec get_banking_and_credit_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Bank of England Act 1998
     vec_append(laws, leg_init("ukpga", "1998", "11"));
@@ -41,9 +41,9 @@ static struct law_list get_banking_and_credit_laws()
     return laws;
 }
 
-static struct string_list get_bankruptcy_and_collateral_laws_categories()
+static struct cstring_vec get_bankruptcy_and_collateral_laws_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Closing a Business");
 //	string_list_append(&categories, "Getting Credit - Legal Rights");
@@ -51,9 +51,9 @@ static struct string_list get_bankruptcy_and_collateral_laws_categories()
     return categories;
 }
 
-static struct law_list get_bankruptcy_and_collateral_laws()
+static struct law_vec get_bankruptcy_and_collateral_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Insolvency Act 1986
     vec_append(laws, leg_init("ukpga", "1986", "45"));
@@ -78,9 +78,9 @@ static struct law_list get_bankruptcy_and_collateral_laws()
     return laws;
 }
 
-static struct string_list get_civil_and_procedure_codes_categories()
+static struct cstring_vec get_civil_and_procedure_codes_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Enforcing Contracts");
     vec_append(categories, "Closing a Business");
@@ -88,9 +88,9 @@ static struct string_list get_civil_and_procedure_codes_categories()
     return categories;
 }
 
-static struct law_list get_civil_and_procedure_codes()
+static struct law_vec get_civil_and_procedure_codes()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Arbitration Act 1996
     vec_append(laws, leg_init("ukpga", "1996", "23"));
@@ -100,9 +100,9 @@ static struct law_list get_civil_and_procedure_codes()
     return laws;
 }
 
-static struct string_list get_commercial_and_company_law_categories()
+static struct cstring_vec get_commercial_and_company_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Starting a Business");
     vec_append(categories, "Protecting Investors");
@@ -110,9 +110,9 @@ static struct string_list get_commercial_and_company_law_categories()
     return categories;
 }
 
-static struct law_list get_commercial_and_company_laws()
+static struct law_vec get_commercial_and_company_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Coal Industry Act 1990
     vec_append(laws, leg_init("ukpga", "1990", "3"));
@@ -147,17 +147,17 @@ static struct law_list get_commercial_and_company_laws()
     return laws;
 }
 
-static struct string_list get_labor_law_categories()
+static struct cstring_vec get_labor_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Employing Workers");
     return categories;
 }
 
-static struct law_list get_labor_laws()
+static struct law_vec get_labor_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Trade Union and Labour Relations (Consolidation) Act 1992
     vec_append(laws, leg_init("ukpga", "1992", "52"));
@@ -234,18 +234,18 @@ static struct law_list get_labor_laws()
 }
 
 
-static struct string_list get_land_and_building_law_categories()
+static struct cstring_vec get_land_and_building_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Dealing with Licenses");
     vec_append(categories, "Registering Property");
     return categories;
 }
 
-static struct law_list get_land_and_building_laws()
+static struct law_vec get_land_and_building_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // The Building Regulations 2010
     vec_append(laws, leg_init("uksi", "2010", "2214"));
@@ -276,17 +276,17 @@ static struct law_list get_land_and_building_laws()
     return laws;
 }
 
-static struct string_list get_security_law_categories()
+static struct cstring_vec get_security_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Protecting Investors");
     return categories;
 }
 
-static struct law_list get_securities_laws()
+static struct law_vec get_securities_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // United Kingdom Listing Authority Listing Rules - not law
     // Financial Services and Markets Act 2000
@@ -298,17 +298,17 @@ static struct law_list get_securities_laws()
     return laws;
 }
 
-static struct string_list get_tax_law_categories()
+static struct cstring_vec get_tax_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Paying Taxes");
     return categories;
 }
 
-static struct law_list get_tax_laws()
+static struct law_vec get_tax_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Income and Corporation Taxes Act 1988 - only enacted
     vec_append(laws, leg_init("ukpga", "1988", "1"));
@@ -334,17 +334,17 @@ static struct law_list get_tax_laws()
     return laws;
 }
 
-static struct string_list get_trade_law_categories()
+static struct cstring_vec get_trade_law_categories()
 {
-    struct string_list categories;
+    struct cstring_vec categories;
     vec_init(categories);
     vec_append(categories, "Trading across Borders");
     return categories;
 }
 
-static struct law_list get_trade_laws()
+static struct law_vec get_trade_laws()
 {
-    struct law_list laws;
+    struct law_vec laws;
     vec_init(laws);
     // Shipping and Trading Interests (Protection) Act 1995
     vec_append(laws, leg_init("ukpga", "1995", "22"));

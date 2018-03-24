@@ -72,17 +72,22 @@ static struct command_vec get_commands()
 {
     struct command_vec commands;
     vec_init(commands);
-    struct command command = { .command = "print", .description =
-                "Print legislation url as PDF."
-    };
+
+    struct command command;
+    command.key = 'p';
+    command.command = "print";
+    command.description = "Print legislation url as PDF.";
     vec_append(commands, command);
+
+    command.key = 's';
     command.command = "save-dbu-compl";
     command.description = "Save the the complexities of law that"
                           " belong into Doing Business report topics"
                           " into sqlite database data.db table complexity_results.";
     vec_append(commands, command);
-    command.command = "conv-csv";
-    command.description = "Convert a csv into a dot format graph.";
+
+//    command.command = "conv-csv";
+//    command.description = "Convert a csv into a dot format graph.";
 //    vec_append(commands, command);
     return commands;
 }
@@ -98,15 +103,15 @@ int main(int argc, char const* argv[])
     struct arp_parser parser = arp_get_parser(argc, argv, 0,
                                options);
 
-    struct global_args result;
-    if (!parse_init_args(&result, &parser))
+    struct global_args args;
+    if (!parse_init_args(&args, &parser))
     {
         vec_free(commands);
         vec_free(options);
         return EXIT_FAILURE;
     }
 
-    if (result.print_help)
+    if (args.print_help)
     {
         col_print_init_help(argv[0], options, commands);
         vec_free(commands);
@@ -116,26 +121,26 @@ int main(int argc, char const* argv[])
     else
     {
         bool success = false;
-        if (result.command == NULL)
+        if (args.command == NULL)
         {
             printf_ea("%s: command is required\n", argv[0]);
             col_print_init_help(argv[0], options, commands);
         }
-        else if (strcmp("print", result.command) == 0)
+        else if (strcmp("print", args.command) == 0)
         {
-            success = print_leg(argv[0], result.command, parser);
+            success = print_leg(argv[0], args.command, parser);
         }
-        else if (strcmp("save-dbu-compl", result.command) == 0)
+        else if (strcmp("save-dbu-compl", args.command) == 0)
         {
-            success = save_dbu_compl(argv[0], result.command, parser);
+            success = save_dbu_compl(argv[0], args.command, parser);
         }
-        else if (strcmp("conv-csv", result.command) == 0)
+        else if (strcmp("conv-csv", args.command) == 0)
         {
-            success = convert_csv(argv[0], result.command, parser);
+            success = convert_csv(argv[0], args.command, parser);
         }
         else
         {
-            printf_ea("%s: unknown command: %s\n", argv[0], result.command);
+            printf_ea("%s: unknown command: %s\n", argv[0], args.command);
             col_print_init_help(argv[0], options, commands);
         }
 

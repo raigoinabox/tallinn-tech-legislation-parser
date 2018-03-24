@@ -7,6 +7,7 @@
 
 struct command
 {
+    char key;
     const char* command;
     const char* description;
 };

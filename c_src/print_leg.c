@@ -40,6 +40,29 @@ struct print_args
     struct string version_date;
 };
 
+static void add_default_filename(struct string* result,
+                                 struct leg_id legislation,
+                                 int32_t file_number, struct string format)
+{
+    str_append(result, legislation.type);
+    str_append(result, str_c("_"));
+    str_append(result, legislation.year);
+    str_append(result, str_c("_"));
+    str_append(result, legislation.number);
+    if (!str_is_empty(legislation.version_date))
+    {
+        str_append(result, str_c("_"));
+        str_append(result, legislation.version_date);
+    }
+    if (file_number > 0)
+    {
+        str_append(result, str_c("_"));
+        str_appendf(result, "%d", file_number);
+    }
+    str_append(result, str_c("."));
+    str_append(result, format);
+}
+
 static bool get_default_file(FILE** result, struct leg_id legislation,
                              const char* format)
 {
@@ -47,39 +70,22 @@ static bool get_default_file(FILE** result, struct leg_id legislation,
                                   str_length(legislation.type) + str_length(legislation.year)
                                   + str_length(legislation.number) + strlen(format) + 10);
 
-    str_append(&file_name, legislation.type);
-    str_appends(&file_name, "_");
-    str_append(&file_name, legislation.year);
-    str_appends(&file_name, "_");
-    str_append(&file_name, legislation.number);
-    str_appends(&file_name, ".");
-    str_appends(&file_name, format);
+    add_default_filename(&file_name, legislation, 0, str_c(format));
+    FILE* output_file = fopen(str_content(file_name), "r");
 
     int32_t file_number = 1;
-    FILE* output_file = fopen(str_content(file_name), "r");
     while (output_file != NULL)
     {
         fclose(output_file);
-
-        char file_number_str[100];
-        sprintf(file_number_str, "%d", file_number);
         str_clear(&file_name);
-        str_append(&file_name, legislation.type);
-        str_appends(&file_name, "_");
-        str_append(&file_name, legislation.year);
-        str_appends(&file_name, "_");
-        str_append(&file_name, legislation.number);
-        str_appends(&file_name, "-");
-        str_appends(&file_name, file_number_str);
-        str_appends(&file_name, ".");
-        str_appends(&file_name, format);
+        add_default_filename(&file_name, legislation, file_number, str_c(format));
 
         output_file = fopen(str_content(file_name), "r");
         file_number += 1;
     }
     if (errno != ENOENT)
     {
-        perror("Unknown error while searching for the default file name ");
+        perror(str_content(file_name));
         return false;
     }
 
@@ -107,7 +113,8 @@ static bool process_args(struct run_info* result, struct print_args args)
         fprintf(stderr, "Url is malformed.\n");
         return false;
     }
-    if (!str_is_empty(args.version_date)) {
+    if (!str_is_empty(args.version_date))
+    {
         legislation.version_date = args.version_date;
     }
     run_info.legislation = legislation;
@@ -153,6 +160,7 @@ static struct arp_option_vec get_options()
         .help_text = "Print this help message.", .argument_name = NULL
     };
     vec_append(options, option);
+
     option.short_form = 'o';
     option.long_form = "output";
     option.help_text = "Print output to FILE instead."
@@ -162,6 +170,7 @@ static struct arp_option_vec get_options()
                        " and doesn't overwrite any existing file.";
     option.argument_name = "FILE";
     vec_append(options, option);
+
     option.short_form = 'f';
     option.long_form = "format";
     option.help_text = "Write output in FORMAT instead."
@@ -171,11 +180,13 @@ static struct arp_option_vec get_options()
                        " http://www.graphviz.org/doc/info/output.html.";
     option.argument_name = "FORMAT";
     vec_append(options, option);
+
     option.short_form = 'g';
     option.long_form = "debug";
     option.help_text = "Debug mode. Shows false-positives.";
     option.argument_name = NULL;
     vec_append(options, option);
+
     option.short_form = 'd';
     option.long_form = "date";
     option.help_text = "Get legislation from that date. Format is yyyy-mm-dd.";
