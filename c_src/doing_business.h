@@ -5,14 +5,14 @@
 #include "legislation.h"
 #include "vectors.h"
 
-vec_struct(law_list, struct leg_id);
-vec_struct(string_list, const char*);
+vec_struct(law_vec, struct leg_id);
+vec_struct(cstring_vec, const char*);
 
 struct dbu_law_category
 {
     const char* name;
-    struct string_list dbu_categories;
-    struct law_list laws;
+    struct cstring_vec dbu_categories;
+    struct law_vec laws;
 };
 
 vec_struct(law_category_list, struct dbu_law_category);

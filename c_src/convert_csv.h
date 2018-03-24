@@ -12,6 +12,7 @@
 
 #include "arg_parsing.h"
 
-bool convert_csv(const char* prog, const char* command, struct arp_parser parser);
+bool convert_csv(const char* prog, const char* command,
+                 struct arp_parser parser);
 
 #endif /* CONVERT_CSV_H_ */

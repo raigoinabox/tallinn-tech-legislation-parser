@@ -12,10 +12,6 @@ struct string
     enum { DYNAMIC, STATIC, CONSTANT } type;
 };
 
-// TODO printf and family (stdio.h?) should be used only in printing.h
-// TODO if -d option is used, this should reflect in default filename
-// TODO clean up parser
-
 struct string str_c(const char* string);
 int32_t str_length(struct string string);
 char* str_content(struct string string);

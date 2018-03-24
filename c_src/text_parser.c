@@ -11,6 +11,8 @@
 
 #include "strings.h"
 
+// TODO clean up parser
+
 static bool str_is_prefix_ci(const char* text, const char* prefix)
 {
     while (*prefix != 0)
@@ -27,35 +29,52 @@ static bool str_is_prefix_ci(const char* text, const char* prefix)
     return true;
 }
 
-static const char* parse_prefix(const char* char_p)
+static bool swallow_literal(const char** char_pp, const char* literal)
 {
-    const char prefix[] = "section";
-    if (!str_is_prefix_ci(char_p, prefix))
+    const char* char_p = *char_pp;
+    int lit_len = strlen(literal);
+    for (int i = 0; i < lit_len; i++)
     {
-        return NULL;
-    }
-    char_p += strlen(prefix);
-
-    if (tolower(*char_p) == 's')
-    {
-        char_p++;
+        if (*char_p == '\0' || *char_p != literal[i])
+        {
+            return false;
+        }
+        char_p += 1;
     }
 
-    return char_p;
+    *char_pp = char_p;
+    return true;
 }
 
-static const char* parse_spaces(const char* char_p)
+static bool swallow_section_lit(const char** char_pp)
 {
+    if (!swallow_literal(char_pp, "section"))
+    {
+        return false;
+    }
+
+    if (tolower(**char_pp) == 's')
+    {
+        *char_pp += 1;
+    }
+
+    return true;
+}
+
+static bool swallow_spaces(const char** char_pp)
+{
+    const char* char_p = *char_pp;
     if (*char_p != ' ')
     {
-        return NULL;
+        return false;
     }
     while (*char_p == ' ')
     {
         char_p++;
     }
 
-    return char_p;
+    *char_pp = char_p;
+    return true;
 }
 
 // return value:
@@ -164,8 +183,6 @@ error:
     return 2;
 }
 
-// doesn't handle cases:
-// section 119A(4) of the Enterprise Act 2002 (c. 40) (which applies to functions
 static struct section_references get_references_from_match(const char* text)
 {
     struct section_references result;
@@ -173,14 +190,11 @@ static struct section_references get_references_from_match(const char* text)
 
     const char* char_p = text;
 
-    char_p = parse_prefix(char_p);
-    if (char_p == NULL)
+    if (!swallow_section_lit(&char_p))
     {
         goto parse_end;
     }
-
-    char_p = parse_spaces(char_p);
-    if (char_p == NULL)
+    else if (!swallow_spaces(&char_p))
     {
         goto parse_end;
     }
@@ -191,52 +205,30 @@ static struct section_references get_references_from_match(const char* text)
     {
         goto parse_end;
     }
-    vec_append(result, str_content(reference));
+    vec_append(result, reference);
 
     bool had_space;
     while (true)
     {
-        had_space = false;
-        if (*char_p == ' ')
-        {
-            had_space = true;
-            while (*char_p == ' ')
-            {
-                char_p++;
-            }
-        }
+        had_space = swallow_spaces(&char_p);
 
         bool is_from_to = false;
-        if (*char_p == ',')
+        if (swallow_literal(&char_p, ","))
         {
-            char_p++;
-            while (*char_p == ' ')
-            {
-                char_p++;
-            }
+            swallow_spaces(&char_p);
         }
         else if (had_space)
         {
-            if (str_is_prefix_ci(char_p, "and"))
+            if (swallow_literal(&char_p, "to"))
             {
-                char_p += strlen("and");
-            }
-            else if (str_is_prefix_ci(char_p, "or"))
-            {
-                char_p += strlen("or");
-            }
-            else if (str_is_prefix_ci(char_p, "to"))
-            {
-                char_p += strlen("to");
                 is_from_to = true;
             }
-            else
+            else if (!swallow_literal(&char_p, "and") && !swallow_literal(&char_p, "or"))
             {
                 break;
             }
 
-            char_p = parse_spaces(char_p);
-            if (char_p == NULL)
+            if (!swallow_spaces(&char_p))
             {
                 goto parse_end;
             }
@@ -261,16 +253,11 @@ static struct section_references get_references_from_match(const char* text)
                         i < strtol(str_content(reference), NULL, 10); i++)
                 {
                     struct string i_string = str_init();
-                    int chars = snprintf(str_content(i_string), 10, "%ld", i);
-                    if (chars <= 0)
-                    {
-                        abort();
-                    }
-
-                    vec_append(result, str_content(i_string));
+                    str_appendf(&i_string, "%ld", i);
+                    vec_append(result, i_string);
                 }
             }
-            vec_append(result, str_content(reference));
+            vec_append(result, reference);
         }
     }
 
@@ -302,7 +289,8 @@ void free_references_deep(struct section_references* references_p)
 
     for (int32_t i = 0; i < vec_length(references); i++)
     {
-        free(vec_elem(references, i));
+        struct string reference = vec_elem(references, i);
+        str_free(&reference);
     }
 
     vec_free(references);
@@ -335,7 +323,7 @@ struct section_references get_references_from_text(const char* text)
                     text + ovector[0]);
         for (int32_t i = 0; i < vec_length(refs_from_match); i++)
         {
-            char* const reference = vec_elem(refs_from_match, i);
+            struct string reference = vec_elem(refs_from_match, i);
             vec_append(result, reference);
         }
         vec_free(refs_from_match);
