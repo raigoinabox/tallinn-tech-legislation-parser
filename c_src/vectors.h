@@ -40,6 +40,12 @@
 			assert((index) < vec_length(vector)))
 
 
+#define vector(type) \
+    struct { \
+        type* content; \
+        int32_t vector_size; \
+        int32_t length; \
+    }
 
 #define vec_struct(name, type) \
 	struct name { \

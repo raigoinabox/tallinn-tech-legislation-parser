@@ -7,7 +7,7 @@
 
 struct string
 {
-    vec_struct(, char) content;
+    vector(char) content;
     int32_t length;
     enum { DYNAMIC, STATIC, CONSTANT } type;
 };
