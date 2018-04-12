@@ -142,6 +142,7 @@ static int32_t parse_section_reference(struct string* result_p,
             {
                 assert(failsafe < 100);
                 char_p++;
+                failsafe += 1;
             }
             if (*char_p != ')')
             {
@@ -200,8 +201,8 @@ static struct section_references get_references_from_match(const char* text)
     }
 
     struct string reference;
-    int32_t error = parse_section_reference(&reference, &char_p);
-    if (error > 0)
+    int32_t error_code = parse_section_reference(&reference, &char_p);
+    if (error_code > 0)
     {
         goto parse_end;
     }
@@ -238,26 +239,26 @@ static struct section_references get_references_from_match(const char* text)
             goto parse_end;
         }
 
-        struct string previous_reference = reference;
-        error = parse_section_reference(&reference, &char_p);
-        if (error > 1)
+        struct string ref_to;
+        error_code = parse_section_reference(&ref_to, &char_p);
+        if (1 < error_code)
         {
             goto parse_end;
         }
-        else if (error < 1)
+        else if (error_code < 1)
         {
             // what to with section 199A to 210?
             if (is_from_to)
             {
-                for (long int i = strtol(str_content(previous_reference), NULL, 10) + 1;
-                        i < strtol(str_content(reference), NULL, 10); i++)
+                for (long int i = strtol(str_content(reference), NULL, 10) + 1;
+                        i < strtol(str_content(ref_to), NULL, 10); i++)
                 {
                     struct string i_string = str_init();
                     str_appendf(&i_string, "%ld", i);
                     vec_append(result, i_string);
                 }
             }
-            vec_append(result, reference);
+            vec_append(result, ref_to);
         }
     }
 
@@ -312,11 +313,10 @@ struct section_references get_references_from_text(const char* text)
         abort();
     }
 
-    int32_t ovector_size = 30;
     int ovector[30];
     int text_len = strlen(text);
     int matches = pcre_exec(regex, NULL, text, text_len, 0, 0, ovector,
-                            ovector_size);
+                            30);
     while (matches > 0)
     {
         struct section_references refs_from_match = get_references_from_match(
@@ -329,7 +329,7 @@ struct section_references get_references_from_text(const char* text)
         vec_free(refs_from_match);
 
         matches = pcre_exec(regex, NULL, text, text_len, ovector[1], 0, ovector,
-                            ovector_size);
+                            30);
     }
     if (matches != -1)
     {

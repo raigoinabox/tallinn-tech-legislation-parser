@@ -1,9 +1,10 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
-#include "text_parser.h"
 #include "vectors.h"
+#include "text_parser.h"
 
 struct section
 {
@@ -19,5 +20,5 @@ int32_t get_references_count(struct section section);
 struct string get_reference(struct section section, int32_t index);
 _Bool has_section_references(struct section section);
 
-void remove_foreign_sections(struct section_vec sections);
+void remove_foreign_sections(struct section_vec sections, bool abort_when_found);
 void remove_single_sections(struct section_vec* sections_p);

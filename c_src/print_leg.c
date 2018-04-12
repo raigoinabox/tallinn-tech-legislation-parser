@@ -289,10 +289,7 @@ bool print_leg(const char* prog, const char* command,
         {
             return false;
         }
-        if (!args.debug)
-        {
-            remove_foreign_sections(sections);
-        }
+        remove_foreign_sections(sections, args.debug);
         remove_single_sections(&sections);
 
         print_graph(run_info.output_file, sections, run_info.format);

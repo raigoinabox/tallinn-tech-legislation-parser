@@ -1,6 +1,6 @@
 #include "sections.h"
 
-#include <stdbool.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -72,7 +72,7 @@ _Bool has_section_references(struct section section)
     return vec_length(section.references) > 0;
 }
 
-void remove_foreign_sections(struct section_vec sections)
+void remove_foreign_sections(struct section_vec sections, bool abort_when_found)
 {
     for (int32_t section_idx = 0; section_idx < vec_length(sections);
             section_idx++)
@@ -93,7 +93,7 @@ void remove_foreign_sections(struct section_vec sections)
             }
             if (!ref_found)
             {
-                assert(false);
+                assert(!abort_when_found);
                 vec_remove(section.references, ref_i);
                 ref_i--;
             }

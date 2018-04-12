@@ -54,10 +54,9 @@ static bool get_legislation_complexity(int32_t* result,
     struct section_vec sections;
     if (!get_sections_from_legislation(&sections, legislation))
     {
-//		fprintf_a(stderr, "get_sections_from_legislation failed. \n");
         return false;
     }
-    remove_foreign_sections(sections);
+    remove_foreign_sections(sections, false);
 
     int32_t sections_count = vec_length(sections);
     if (sections_count == 0)
