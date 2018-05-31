@@ -1,14 +1,16 @@
 #include "web.h"
 
-#include <stdlib.h>
-
-#include <string.h>
 #include <assert.h>
-
+#include <curl/easy.h>
+#include <curl/typecheck-gcc.h>
 #include <sqlite3.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
-#include "util.h"
 #include "database.h"
+#include "printing.h"
+#include "util.h"
 
 static size_t add_page_content(char* contents, size_t size, size_t nmemb,
                                void* my_data)
@@ -177,7 +179,12 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
     sqlite3_stmt *statement = db_prepare_stmt(db_conn, sql);
     db_bind_text(statement, 1, url);
     bool is_row;
-    db_step(&is_row, statement);
+    if (!db_step(&is_row, statement))
+    {
+        printf_ea(sqlite3_errmsg(db_conn));
+        abort();
+    }
+
     struct page page = { 0 };
     if (is_row)
     {
@@ -189,7 +196,11 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
         strncpy(page.contents, cached_content, page.contents_size);
         page.contents[page.contents_size] = '\0';
 
-        db_step(&is_row, statement);
+        if (!db_step(&is_row, statement))
+        {
+            printf_ea(sqlite3_errmsg(db_conn));
+            abort();
+        }
         assert(!is_row);
     }
 
@@ -203,7 +214,11 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
                                     "insert into web_cache (url, content) values (?, ?);");
         db_bind_text(statement, 1, url);
         db_bind_text(statement, 2, page.contents);
-        db_step(&is_row, statement);
+        if (!db_step(&is_row, statement))
+        {
+            printf_ea(sqlite3_errmsg(db_conn));
+            abort();
+        }
         assert(!is_row);
         db_close_stmt(statement);
     }

@@ -18,7 +18,8 @@ struct complexity_result_dto
     struct string country;
     int32_t year;
     struct string dbu_category;
-    int32_t complexity;
+    double complexity;
+    int32_t algorithm;
 };
 
 void delete_results(sqlite3* db_conn);

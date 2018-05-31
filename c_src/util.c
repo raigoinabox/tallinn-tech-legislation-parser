@@ -5,6 +5,9 @@
 
 void* malloc_a(size_t nmemb, size_t memb_size)
 {
+    if (SIZE_MAX / nmemb < memb_size) {
+        abort();
+    }
     void* result = malloc(nmemb * memb_size);
     if (result == NULL)
     {
@@ -16,6 +19,9 @@ void* malloc_a(size_t nmemb, size_t memb_size)
 
 void* realloc_a(void* pointer, size_t nmemb, size_t memb_size)
 {
+    if (SIZE_MAX / nmemb < memb_size) {
+        abort();
+    }
     void* result = realloc(pointer, nmemb * memb_size);
     if (result == NULL)
     {

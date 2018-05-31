@@ -11,7 +11,8 @@ CREATE TABLE complexity_results (
 	country TEXT NOT NULL,
 	year INTEGER NOT NULL,
 	dbu_category TEXT NOT NULL,
-	complexity INTEGER NOT NULL
+	complexity REAL NOT NULL,
+	algorithm INTEGER NOT NULL
 );
 
 CREATE TABLE dbu_results (

@@ -85,13 +85,10 @@ static int32_t parse_section_reference(struct string* result_p,
                                        const char** char_pp)
 {
     const char* char_p = *char_pp;
-    bool reference_exists;
+    bool reference_exists = false;
     struct string result;
-    bool result_string_initialized = false;
     if (isdigit(*char_p))
     {
-        reference_exists = true;
-
         char ref_buffer[10];
         int32_t ref_buf_i = 0;
         while (isdigit(*char_p))
@@ -116,14 +113,10 @@ static int32_t parse_section_reference(struct string* result_p,
         ref_buffer[ref_buf_i] = 0;
 
         result = str_init_ds(ref_buf_i + 2);
-        result_string_initialized = true;
+        reference_exists = true;
         str_appends(&result, ref_buffer);
     }
-    else if (*char_p == '(')
-    {
-        reference_exists = false;
-    }
-    else
+    else if (*char_p != '(')
     {
         goto error;
     }
@@ -160,15 +153,11 @@ static int32_t parse_section_reference(struct string* result_p,
         char_p++;
     }
 
-    if (result_string_initialized)
-    {
-        *result_p = result;
-    }
-
     *char_pp = char_p;
 
     if (reference_exists)
     {
+        *result_p = result;
         return 0;
     }
     else
@@ -177,7 +166,7 @@ static int32_t parse_section_reference(struct string* result_p,
     }
 
 error:
-    if (result_string_initialized)
+    if (reference_exists)
     {
         str_free(&result);
     }

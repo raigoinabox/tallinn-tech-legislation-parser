@@ -11,12 +11,14 @@ Compilation on Ubuntu
 ---------------------
 This project uses meson for building: http://mesonbuild.com/.
 
-Get
+Install
 * libxml2
 * libcurl
 * libpcre.
 * libgraphviz-dev
 * sqlite3
+* postgresql
+* libpq-dev
 * meson
 
 and write
@@ -31,23 +33,8 @@ as well.
 
 Usage
 -----
-Write
-> ./leg <legislation.gov.uk act url>
-
-Then the program will write into a default file the connections between
-sections inside the act in pdf format. References to outside acts are ignored.
 
 Write
 > ./leg -h
 
-for more information about different options.
-
-The program achieves this with a mix of parsing the xml and parsing the text.
-Mostly text.
-
-### Makefile
-For testing comfort, Makefile has a target run_test. It will construct a
-graph.pdf from a certain url and open the graph.pdf file with the default
-application for viewing pdfs.
-
-The url is hard coded in the Makefile. 
+to find out about how the program works.

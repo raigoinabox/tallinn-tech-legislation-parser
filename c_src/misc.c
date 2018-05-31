@@ -204,6 +204,7 @@ static bool get_sections_from_page(struct section_vec* result, struct page page)
     if (xmlSAXUserParseMemory(&sax, &sax_state, page.contents,
                               page.contents_size) != 0)
     {
+        assert(vec_length(sax_state.result) <= 0);
         vec_free(sax_state.result);
         return false;
     }

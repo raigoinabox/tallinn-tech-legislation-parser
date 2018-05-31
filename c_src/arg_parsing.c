@@ -20,7 +20,7 @@
 static bool find_option(struct arp_option* result,
                         struct arp_option_vec options, const char short_form)
 {
-    for (int32_t option_index = 0;
+    for (size_t option_index = 0;
             option_index < vec_length(options); option_index++)
     {
         struct arp_option option = vec_elem(options, option_index);
@@ -84,7 +84,7 @@ static bool next_long_option(struct arp_parser* parser_p,
 {
     struct arp_parser parser = *parser_p;
 
-    for (int32_t option_index = 0;
+    for (size_t option_index = 0;
             option_index < vec_length(parser.options);
             option_index++)
     {
@@ -244,7 +244,7 @@ const char* arp_get_arg(struct arp_parser parser)
 
 void arp_print_options_help(struct arp_option_vec options)
 {
-    for (int32_t i = 0; i < vec_length(options); i++)
+    for (size_t i = 0; i < vec_length(options); i++)
     {
         struct arp_option option = vec_elem(options, i);
         char mod_long_form[strlen(option.long_form)

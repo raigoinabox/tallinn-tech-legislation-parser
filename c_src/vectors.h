@@ -23,7 +23,7 @@
 	sizeof(*vec_content(vector))
 
 #define _vec_elem(vector, index) \
-	(vector).content[index]
+	vec_content(vector)[index]
 
 #define _vec_init(vector, content, length, size) \
 	(assert(0 < (size)), vec_content(vector) = (content), \
@@ -36,22 +36,21 @@
 					vec_size(vector), _vec_elem_size(vector)))
 
 #define _assert_index(vector, index) \
-	(assert(0 <= (index)), \
-			assert((index) < vec_length(vector)))
+	(assert((index) < vec_length(vector)))
 
 
 #define vector(type) \
     struct { \
         type* content; \
         int32_t vector_size; \
-        int32_t length; \
+        size_t length; \
     }
 
 #define vec_struct(name, type) \
 	struct name { \
 		type* content; \
 		int32_t vector_size; \
-		int32_t length; \
+		size_t length; \
 	}
 
 #define vec_init(vector) \
@@ -109,5 +108,9 @@
 					* (vec_length(vector) - (index) - 1)) \
 			: 0, \
 			vec_length(vector)--)
+
+vec_struct(_void_vec, void*);
+
+void _vec_free(void* vector_p);
 
 #endif /* VECTORS_H_ */

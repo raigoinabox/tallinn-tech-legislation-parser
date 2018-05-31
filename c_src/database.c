@@ -82,7 +82,16 @@ void db_bind_int(sqlite3_stmt* statement, int index, int integer)
     }
 }
 
-void db_step(bool* is_row, sqlite3_stmt* statement)
+void db_bind_double(sqlite3_stmt* statement, int index, double value)
+{
+    int return_code = sqlite3_bind_double(statement, index, value);
+    if (return_code != SQLITE_OK)
+    {
+        abort();
+    }
+}
+
+bool db_step(bool* is_row, sqlite3_stmt* statement)
 {
     int return_code = sqlite3_step(statement);
     if (return_code == SQLITE_ROW)
@@ -95,6 +104,7 @@ void db_step(bool* is_row, sqlite3_stmt* statement)
     }
     else
     {
-        abort();
+        return false;
     }
+    return true;
 }

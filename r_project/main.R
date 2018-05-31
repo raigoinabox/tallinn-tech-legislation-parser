@@ -2,42 +2,27 @@
 
 library(DBI)
 
-main <- function() {
-  conn <- dbConnect(RSQLite::SQLite(), "../data.db")
+Category.run <- function(category.data) {
+  category.data$complexity <- scale(category.data$complexity)
+  category.data$dtf <- scale(category.data$dtf)
+  cor(category.data$complexity, category.data$dtf)
+}
+
+Algorithm.run <- function(algorithm.data) {
+  as.vector(by(algorithm.data, algorithm.data$dbu_category, Category.run))
+}
+
+Main <- function() {
+  db.conn <- dbConnect(RSQLite::SQLite(), "../data.db")
   results <- dbGetQuery(
-    conn,
+    db.conn,
     paste(
-      "select core.year, core.dbu_category, complexity, dtf",
+      "select core.year, core.dbu_category, complexity, dtf, algorithm",
       "from complexity_results core",
       "join dbu_results dbre on core.year = dbre.year and core.dbu_category = dbre.dbu_category"
     )
   )
-  categories <- unique(results["dbu_category"])
-  years <- unique(results["year"])
-  compl_matr <- matrix(
-    data = NA,
-    nrow = nrow(years),
-    ncol = nrow(categories),
-    dimnames = list(unlist(years), unlist(categories))
-  )
-  dbu_matr <- matrix(
-    data = NA,
-    nrow = nrow(years),
-    ncol = nrow(categories),
-    dimnames = list(unlist(years), unlist(categories))
-  )
-  
-  for (i in 1:nrow(results)) {
-    row <- results[i,]
-    compl_matr[as.character(row$year), row$dbu_category] <- row$complexity
-    dbu_matr[as.character(row$year), row$dbu_category] <- row$dtf
-  }
-  
-  # compl_matr <- compl_matr[complete.cases(compl_matr),]
-  # dbu_matr <- dbu_matr[complete.cases(dbu_matr),]
-  compl_matr
-  cor_matrix <- cor(compl_matr, dbu_matr, use = "complete.obs")
-  diag(cor_matrix)
+  by(results, results$algorithm, Algorithm.run)
 }
 
-main()
+print(Main())
