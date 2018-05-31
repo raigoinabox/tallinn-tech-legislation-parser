@@ -3,13 +3,13 @@
 library(DBI)
 
 Category.run <- function(category.data) {
-  category.data$complexity <- scale(category.data$complexity)
-  category.data$dtf <- scale(category.data$dtf)
+  category.data <- category.data[c("complexity", "dtf")]
+  category.data <- as.data.frame(scale(category.data))
   cor(category.data$complexity, category.data$dtf)
 }
 
 Algorithm.run <- function(algorithm.data) {
-  as.vector(by(algorithm.data, algorithm.data$dbu_category, Category.run))
+  by(algorithm.data, algorithm.data$dbu_category, Category.run)
 }
 
 Main <- function() {
@@ -17,12 +17,12 @@ Main <- function() {
   results <- dbGetQuery(
     db.conn,
     paste(
-      "select core.year, core.dbu_category, complexity, dtf, algorithm",
+      "select core.dbu_category, complexity, dtf, algorithm",
       "from complexity_results core",
       "join dbu_results dbre on core.year = dbre.year and core.dbu_category = dbre.dbu_category"
     )
   )
-  by(results, results$algorithm, Algorithm.run)
+  do.call(rbind, by(results, results$algorithm, Algorithm.run))
 }
 
 print(Main())
