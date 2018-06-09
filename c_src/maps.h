@@ -20,11 +20,9 @@ struct map_entry
     void* value;
 };
 
-vec_struct(_map, struct map_entry);
-
 struct map
 {
-    struct _map map;
+    vector(struct map_entry) entries;
     size_t key_size;
     size_t value_size;
     int (*comparator)(void* elem1, void* elem2, int (*type_comparator)());
@@ -45,7 +43,6 @@ struct map_iterator
 		struct map_iterator parent; \
 	}; \
 	modifier struct name name ## _init(int (*comparator)(key_type key1, key_type key2)); \
-	modifier void name ## _free(struct name* name); \
 	modifier bool name ## _get(value_type* result, struct name name, key_type key); \
 	modifier void name ## _set(struct name* name, key_type key, value_type value); \
 	struct name ## _iterator name ## _iterator(struct name name); \
@@ -69,21 +66,10 @@ struct map_iterator
 		}; \
 		return name; \
 	} \
-	modifier void name ## _free(struct name* name) \
-	{ \
-		map_free(&name->parent); \
-	} \
 	modifier bool name ## _get(value_type* result, struct name name, key_type key) \
-	{ \
-		void* _result = result; \
-		bool success = map_get_value_p(&_result, name.parent, &key); \
-		if (success) { \
-			*result = *(value_type*)_result; \
-			return true; \
-		} else { \
-			return false; \
-		} \
-	} \
+    { \
+        return map_get_value(result, name.parent, &key); \
+    } \
 	modifier void name ## _set(struct name* name, key_type key, value_type value) \
 	{ \
 		map_set(&name->parent, &key, &value); \
@@ -112,6 +98,8 @@ struct map_iterator
 		return * (value_type*) map_iterator_get_value_p(iterator.parent); \
 	}
 
+#define MAP_FREE(map) map_free(&map.parent)
+
 #define MAP_ITERATOR_SET(iterator, value) map_iterator_set(iterator.parent, &value)
 
 struct map map_init(int32_t key_size, int32_t value_size,
@@ -119,6 +107,7 @@ struct map map_init(int32_t key_size, int32_t value_size,
                     int (*type_comparator)());
 void map_free(struct map* map_p);
 bool map_get_value_p(void** result, struct map map, void* key);
+bool map_get_value(void* result, struct map map, void* key);
 void map_set(struct map* map_p, void* key, void* value);
 struct map_iterator map_iterator(struct map map);
 void map_iterator_next(struct map_iterator* iterator);

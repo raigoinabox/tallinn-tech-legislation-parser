@@ -21,7 +21,7 @@ static bool is_section_connected(struct section_vec sections,
         for (int32_t ref_idx = 0; ref_idx < get_references_count(test_section);
                 ref_idx++)
         {
-            if (strcmp(str_content(get_reference(test_section, ref_idx)), section.id) == 0)
+            if (str_equal(get_reference(test_section, ref_idx), section.id))
             {
                 return 1;
             }
@@ -35,8 +35,7 @@ static void free_section(struct section* section_p)
 {
     struct section section = *section_p;
 
-    free(section.id);
-    section.id = NULL;
+    str_free(&section.id);
     free_references_deep(&section.references);
 
     *section_p = section;
@@ -85,7 +84,7 @@ void remove_foreign_sections(struct section_vec sections, bool abort_when_found)
             bool ref_found = 0;
             for (int32_t i = 0; i < vec_length(sections); i++)
             {
-                if (strcmp(vec_elem(sections, i).id, str_content(reference)) == 0)
+                if (str_equal(vec_elem(sections, i).id, reference) == 0)
                 {
                     ref_found = 1;
                     break;
@@ -96,6 +95,7 @@ void remove_foreign_sections(struct section_vec sections, bool abort_when_found)
                 assert(!abort_when_found);
                 vec_remove(section.references, ref_i);
                 ref_i--;
+                str_free(&reference);
             }
         }
         vec_set(sections, section_idx, section);

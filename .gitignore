@@ -14,6 +14,7 @@ callgrind.out.*
 .settings
 makefile.targets
 meson-build
+build-debugoptimized
 .Rproj.user
 r_src/.RData
 r_src/.Rhistory

@@ -11,8 +11,6 @@
 
 #include "strings.h"
 
-// TODO clean up parser
-
 static bool str_is_prefix_ci(const char* text, const char* prefix)
 {
     while (*prefix != 0)

@@ -22,5 +22,7 @@ void db_bind_text2(sqlite3_stmt* statement, int index, struct string text);
 void db_bind_int(sqlite3_stmt* statement, int index, int integer);
 void db_bind_double(sqlite3_stmt* statement, int index, double value);
 bool db_step(bool* is_row, sqlite3_stmt* statement);
+void begin_transaction(sqlite3* db_conn);
+void commit_transaction(sqlite3* db_conn);
 
 #endif /* DATABASE_H_ */

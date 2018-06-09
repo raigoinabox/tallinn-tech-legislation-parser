@@ -102,10 +102,10 @@ void print_graph(FILE* file, struct section_vec connections,
         for (int32_t i = 0; i < vec_length(connections); i++)
         {
             struct section section = vec_elem(connections, i);
-            struct string section_node_id = get_node_id(str_c(section.id));
+            struct string section_node_id = get_node_id(section.id);
             Agnode_t *node = agnode(graph, str_content(section_node_id), 1);
             str_free(&section_node_id);
-            agsafeset(node, "label", section.id, "");
+            agsafeset(node, "label", str_content(section.id), "");
             for (int32_t ref_i = 0;
                     ref_i < vec_length(section.references);
                     ref_i++)

@@ -70,7 +70,7 @@ struct SAX_state
 {
     struct section_vec result;
     int section_depth;
-    const xmlChar* section_number;
+    struct string section_number;
     struct string section_text;
 };
 
@@ -100,11 +100,8 @@ static void sax_start_element(void* user_data, const xmlChar* name,
                               prefix_length) == 0)
         {
             const xmlChar* id = attributes[i + 1];
-            xmlChar* section_number = malloc_a(
-                                          (xmlStrlen(id) + 1 - prefix_length), sizeof(xmlChar));
-            section_number[0] = '\0';
-            state.section_number = xmlStrcat(section_number,
-                                             id + prefix_length);
+            state.section_number = str_init();
+            str_appends(&state.section_number, char_from_xml(id + prefix_length));
             state.section_depth = 1;
             state.section_text = str_init();
             goto end;
@@ -135,9 +132,9 @@ static void sax_end_element(void* user_data, const xmlChar* name)
                 char_from_xml(node_text));
         xmlFree(node_text);
 
-        struct section section = { .id = (char*) state.section_number,
-                   .references = references
-        };
+        struct section section;
+        section.id = state.section_number;
+        section.references = references;
         vec_append(state.result, section);
         str_free(&state.section_text);
     }

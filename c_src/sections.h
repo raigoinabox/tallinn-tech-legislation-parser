@@ -3,12 +3,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "strings.h"
 #include "vectors.h"
 #include "text_parser.h"
 
 struct section
 {
-    char* id;
+    struct string id;
     struct section_references references;
 };
 

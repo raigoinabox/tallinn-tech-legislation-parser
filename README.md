@@ -17,8 +17,7 @@ Install
 * libpcre.
 * libgraphviz-dev
 * sqlite3
-* postgresql
-* libpq-dev
+* libigraph0-dev
 * meson
 
 and write

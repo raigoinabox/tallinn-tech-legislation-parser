@@ -108,3 +108,33 @@ bool db_step(bool* is_row, sqlite3_stmt* statement)
     }
     return true;
 }
+
+void begin_transaction(sqlite3* db_conn)
+{
+    sqlite3_stmt* statement =
+        db_prepare_stmt(db_conn, "begin transaction");
+    bool is_row;
+    if (!db_step(&is_row, statement))
+    {
+        printf_ea(sqlite3_errmsg(db_conn));
+        abort();
+    }
+    assert(!is_row);
+
+    db_close_stmt(statement);
+}
+
+void commit_transaction(sqlite3* db_conn)
+{
+    sqlite3_stmt* statement =
+        db_prepare_stmt(db_conn, "commit transaction");
+    bool is_row;
+    if (!db_step(&is_row, statement))
+    {
+        printf_ea(sqlite3_errmsg(db_conn));
+        abort();
+    }
+    assert(!is_row);
+
+    db_close_stmt(statement);
+}

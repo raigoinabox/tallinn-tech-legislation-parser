@@ -30,7 +30,7 @@ bool col_print_init_help(const char* program_name,
     arp_print_options_help(options);
     printeln_a();
     println_a(str_c("Possible commands are:"));
-    for (size_t i = 0; i < vec_length(commands); i++)
+    for (vec_size i = 0; i < vec_length(commands); i++)
     {
         struct command command = vec_elem(commands, i);
         struct string description = fit_text(command.description,

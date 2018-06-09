@@ -3,13 +3,15 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-void* malloc_a(size_t nmemb, size_t memb_size)
+void* malloc_a(size_t elem_count, size_t elem_size)
 {
-    if (SIZE_MAX / nmemb < memb_size) {
+    if (SIZE_MAX / elem_count < elem_size) {
+        fprintf(stderr, "error: requested too much memory\n");
         abort();
     }
-    void* result = malloc(nmemb * memb_size);
-    if (result == NULL)
+    size_t malloc_size = elem_count * elem_size;
+    void* result = malloc(malloc_size);
+    if (result == NULL && malloc_size > 0)
     {
         perror("malloc");
         abort();
