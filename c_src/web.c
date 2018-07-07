@@ -15,99 +15,77 @@
 static size_t add_page_content(char* contents, size_t size, size_t nmemb,
                                void* my_data)
 {
-    struct page* page_p = my_data;
-    struct page page = *page_p;
-    int32_t offset = page.contents_size;
     size_t size_to_write = size * nmemb;
-    page.contents_size += size_to_write;
-    page.contents = realloc(page.contents, page.contents_size + 1);
-    if (page.contents == NULL)
-    {
-        page.contents_size = 0;
-        *page_p = page;
-        return 0;
-    }
-
-    memcpy(page.contents + offset, contents, size_to_write);
-    page.contents[page.contents_size] = 0;
-
-    *page_p = page;
+    str_appendn(my_data, contents, size_to_write);
     return size_to_write;
 }
 
-static struct page make_query(const char* url, CURLcode* const error,
-                              char* error_buffer)
+static bool make_query(struct string* result, const char* url,
+        char* error_buffer)
 {
-    assert(error);
-
     CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
+    bool success = true;
     if (code != CURLE_OK)
     {
-        abort();
+        success = false;
+        goto exit;
     }
 
     CURL* handle = curl_easy_init();
     if (handle == NULL)
     {
-        goto cleanup_1;
+        success = false;
+        goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_USERAGENT, "leg/1.0");
     if (code != CURLE_OK)
     {
-        goto cleanup_1;
+        success = false;
+        goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, add_page_content);
     if (code != CURLE_OK)
     {
-        goto cleanup_1;
+        success = false;
+        goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_URL, url);
     if (code != CURLE_OK)
     {
-        goto cleanup_1;
+        success = false;
+        goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, error_buffer);
     assert(code == CURLE_OK);
-    struct page page = { .contents = malloc(1), .contents_size = 0 };
-    if (page.contents == NULL)
-    {
-        goto cleanup_1;
-    }
-    page.contents[0] = 0;
+    struct string page = str_init();
     code = curl_easy_setopt(handle, CURLOPT_WRITEDATA, &page);
     if (code != CURLE_OK)
     {
-        goto cleanup_1;
+        success = false;
+        goto exit;
     }
-    *error = curl_easy_perform(handle);
+    code = curl_easy_perform(handle);
+    if (code != CURLE_OK)
+    {
+        success = false;
+        goto exit;
+    }
 
+exit:
+    if (success)
+    {
+        *result = page;
+    }
+    else
+    {
+        str_free(&page);
+    }
     curl_easy_cleanup(handle);
     curl_global_cleanup();
-    return page;
-
-cleanup_1:
-    if (page.contents != NULL)
-    {
-        free(page.contents);
-    }
-    if (handle != NULL)
-    {
-        curl_easy_cleanup(handle);
-    }
-    curl_global_cleanup();
-    abort();
+    return success;
 }
 
-void legislation_free(struct leg_id* legislation_p)
-{
-    struct leg_id legislation = *legislation_p;
-    str_free(&legislation.type);
-    str_free(&legislation.year);
-    str_free(&legislation.number);
-    *legislation_p = legislation;
-}
-
-bool parse_url(struct leg_id* result, const char* url)
+bool parse_leg_url(struct leg_id* result, const char* url)
 {
     char url_buffer[strlen(url) + 1];
     strcpy(url_buffer, url);
@@ -150,28 +128,27 @@ bool parse_url(struct leg_id* result, const char* url)
     return true;
 }
 
-struct string get_api_url(struct leg_id legislation)
+struct string get_leg_api_url(struct leg_id legislation)
 {
-    struct string normalized = str_init_ds(
-                                   str_length(legislation.type) + str_length(legislation.year)
-                                   + str_length(legislation.number) + 128);
-    str_appends(&normalized, "http://www.legislation.gov.uk/");
-    str_append(&normalized, legislation.type);
-    str_appends(&normalized, "/");
-    str_append(&normalized, legislation.year);
-    str_appends(&normalized, "/");
-    str_append(&normalized, legislation.number);
+    struct string url = str_init();
+    str_appends(&url, "http://www.legislation.gov.uk/");
+    str_append(&url, legislation.type);
+    str_appends(&url, "/");
+    str_append(&url, legislation.year);
+    str_appends(&url, "/");
+    str_append(&url, legislation.number);
     if (str_length(legislation.version_date) == 10)
     {
-        str_appends(&normalized, "/");
-        str_append(&normalized, legislation.version_date);
+        str_appends(&url, "/");
+        str_append(&url, legislation.version_date);
     }
-    str_appends(&normalized, "/data.xml");
+    str_appends(&url, "/data.xml");
 
-    return normalized;
+    return url;
 }
 
-struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
+bool get_web_page(
+        struct string* result, const char* url, char* error_buffer)
 {
     sqlite3* db_conn = db_open_conn();
 
@@ -185,16 +162,16 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
         abort();
     }
 
-    struct page page = { 0 };
+    struct string page = { 0 };
     if (is_row)
     {
         assert(sqlite3_column_type(statement, 0) == SQLITE_TEXT);
         const char* cached_content = (const char*) sqlite3_column_text(
                                          statement, 0);
-        page.contents_size = sqlite3_column_bytes(statement, 0);
-        page.contents = malloc_a(page.contents_size + 1, sizeof(unsigned char));
-        strncpy(page.contents, cached_content, page.contents_size);
-        page.contents[page.contents_size] = '\0';
+
+        page = str_init();
+        int contents_size = sqlite3_column_bytes(statement, 0);
+        str_appendn(&page, cached_content, contents_size);
 
         if (!db_step(&is_row, statement))
         {
@@ -206,14 +183,18 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
 
     db_close_stmt(statement);
 
-    if (page.contents == NULL)
+    bool success = true;
+    if (str_content(page) == NULL)
     {
-        page = make_query(url, error, error_buffer);
+        if (!make_query(&page, url, error_buffer)) {
+            success = false;
+            goto exit;
+        }
 
         statement = db_prepare_stmt(db_conn,
                                     "insert into web_cache (url, content) values (?, ?);");
         db_bind_text(statement, 1, url);
-        db_bind_text(statement, 2, page.contents);
+        db_bind_text(statement, 2, str_content(page));
         if (!db_step(&is_row, statement))
         {
             printf_ea(sqlite3_errmsg(db_conn));
@@ -223,9 +204,10 @@ struct page get_web_page(const char* url, CURLcode* error, char* error_buffer)
         db_close_stmt(statement);
     }
 
+    *result = page;
+exit:
     db_close_conn(db_conn);
-    *error = CURLE_OK;
-
-    return page;
+    *result = page;
+    return success;
 }
 

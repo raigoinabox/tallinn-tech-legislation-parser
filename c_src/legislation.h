@@ -18,6 +18,7 @@ struct leg_id
     struct string version_date;
 };
 
-struct leg_id leg_init(char* type, char* year, char* number);
+struct leg_id leg_init_c(const char* type, const char* year, const char* number);
+void leg_free(struct leg_id* legislation_p);
 
 #endif /* LEGISLATION_H_ */

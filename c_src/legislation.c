@@ -11,7 +11,7 @@
 
 #include "strings.h"
 
-struct leg_id leg_init(char* type, char* year, char* number)
+struct leg_id leg_init_c(const char* type, const char* year, const char* number)
 {
     struct leg_id leg =
     {
@@ -22,3 +22,11 @@ struct leg_id leg_init(char* type, char* year, char* number)
     return leg;
 }
 
+void leg_free(struct leg_id* legislation_p)
+{
+    struct leg_id legislation = *legislation_p;
+    str_free(&legislation.type);
+    str_free(&legislation.year);
+    str_free(&legislation.number);
+    *legislation_p = legislation;
+}

@@ -20,12 +20,12 @@ struct global_args
 static struct arp_option_vec get_leg_options()
 {
     struct arp_option_vec leg_options;
-    vec_init(leg_options);
+    vec_init_old(leg_options);
     struct arp_option global_option = { .short_form = 'h', .long_form = "help",
         .help_text = "Print this help message.", .argument_name =
                          NULL
     };
-    vec_append(leg_options, global_option);
+    vec_append_old(leg_options, global_option);
     return leg_options;
 }
 
@@ -71,20 +71,20 @@ static bool parse_init_args(struct global_args* result_p,
 static struct command_vec get_commands()
 {
     struct command_vec commands;
-    vec_init(commands);
+    vec_init_old(commands);
 
     struct command command;
     command.key = 'p';
     command.command = "print";
     command.description = "Print legislation url as PDF.";
-    vec_append(commands, command);
+    vec_append_old(commands, command);
 
     command.key = 's';
     command.command = "save-dbu-compl";
     command.description = "Save the the complexities of law that"
                           " belong into Doing Business report topics"
                           " into sqlite database data.db table complexity_results.";
-    vec_append(commands, command);
+    vec_append_old(commands, command);
 
 //    command.command = "conv-csv";
 //    command.description = "Convert a csv into a dot format graph.";

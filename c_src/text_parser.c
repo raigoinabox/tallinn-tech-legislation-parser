@@ -87,32 +87,18 @@ static int32_t parse_section_reference(struct string* result_p,
     struct string result;
     if (isdigit(*char_p))
     {
-        char ref_buffer[10];
-        int32_t ref_buf_i = 0;
+        reference_exists = true;
+        result = str_init();
         while (isdigit(*char_p))
         {
-            if (ref_buf_i >= 10 - 1)
-            {
-                abort();
-            }
-            ref_buffer[ref_buf_i] = *char_p;
-
-            ref_buf_i++;
+            str_appendn(&result, char_p, 1);
             char_p++;
         }
         while (*char_p >= 'A' && *char_p <= 'Z')
         {
-            assert(ref_buf_i < 10 - 1);
-            ref_buffer[ref_buf_i] = *char_p;
-
-            ref_buf_i++;
+            str_appendn(&result, char_p, 1);
             char_p++;
         }
-        ref_buffer[ref_buf_i] = 0;
-
-        result = str_init_ds(ref_buf_i + 2);
-        reference_exists = true;
-        str_appends(&result, ref_buffer);
     }
     else if (*char_p != '(')
     {
@@ -171,12 +157,12 @@ error:
     return 2;
 }
 
-static struct section_references get_references_from_match(const char* text)
+static struct section_references get_references_from_match(struct string text)
 {
     struct section_references result;
-    vec_init(result);
+    vec_init_old(result);
 
-    const char* char_p = text;
+    const char* char_p = str_content(text);
 
     if (!swallow_section_lit(&char_p))
     {
@@ -193,7 +179,7 @@ static struct section_references get_references_from_match(const char* text)
     {
         goto parse_end;
     }
-    vec_append(result, reference);
+    vec_append_old(result, reference);
 
     bool had_space;
     while (true)
@@ -234,7 +220,7 @@ static struct section_references get_references_from_match(const char* text)
         }
         else if (error_code < 1)
         {
-            // what to with section 199A to 210?
+            // what to do with section 199A to 210?
             if (is_from_to)
             {
                 for (long int i = strtol(str_content(reference), NULL, 10) + 1;
@@ -242,10 +228,10 @@ static struct section_references get_references_from_match(const char* text)
                 {
                     struct string i_string = str_init();
                     str_appendf(&i_string, "%ld", i);
-                    vec_append(result, i_string);
+                    vec_append_old(result, i_string);
                 }
             }
-            vec_append(result, ref_to);
+            vec_append_old(result, ref_to);
         }
     }
 
@@ -267,7 +253,7 @@ parse_end:
 
 ignore_references:
     free_references_deep(&result);
-    vec_init(result);
+    vec_init_old(result);
     return result;
 }
 
@@ -275,9 +261,9 @@ void free_references_deep(struct section_references* references_p)
 {
     struct section_references references = *references_p;
 
-    for (int32_t i = 0; i < vec_length(references); i++)
+    for (int32_t i = 0; i < vec_length_old(references); i++)
     {
-        struct string reference = vec_elem(references, i);
+        struct string reference = vec_elem_old(references, i);
         str_free(&reference);
     }
 
@@ -286,10 +272,10 @@ void free_references_deep(struct section_references* references_p)
     *references_p = references;
 }
 
-struct section_references get_references_from_text(const char* text)
+struct section_references get_references_from_text(struct string text)
 {
     struct section_references result;
-    vec_init(result);
+    vec_init_old(result);
 
     const char* error_message;
     int error_offset;
@@ -301,21 +287,22 @@ struct section_references get_references_from_text(const char* text)
     }
 
     int ovector[30];
-    int text_len = strlen(text);
-    int matches = pcre_exec(regex, NULL, text, text_len, 0, 0, ovector,
+    int matches = pcre_exec(regex, NULL, str_content(text), str_length(text), 0, 0,
+                            ovector,
                             30);
     while (matches > 0)
     {
         struct section_references refs_from_match = get_references_from_match(
-                    text + ovector[0]);
-        for (int32_t i = 0; i < vec_length(refs_from_match); i++)
+                    str_substring(text, ovector[0]));
+        for (int32_t i = 0; i < vec_length_old(refs_from_match); i++)
         {
-            struct string reference = vec_elem(refs_from_match, i);
-            vec_append(result, reference);
+            struct string reference = vec_elem_old(refs_from_match, i);
+            vec_append_old(result, reference);
         }
         vec_free(refs_from_match);
 
-        matches = pcre_exec(regex, NULL, text, text_len, ovector[1], 0, ovector,
+        matches = pcre_exec(regex, NULL, str_content(text), str_length(text),
+                            ovector[1], 0, ovector,
                             30);
     }
     if (matches != -1)

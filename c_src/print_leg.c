@@ -108,7 +108,7 @@ static bool process_args(struct run_info* result, struct print_args args)
     run_info.debug = args.debug;
 
     struct leg_id legislation;
-    if (!parse_url(&legislation, args.url))
+    if (!parse_leg_url(&legislation, args.url))
     {
         fprintf(stderr, "Url is malformed.\n");
         return false;
@@ -155,11 +155,11 @@ static bool process_args(struct run_info* result, struct print_args args)
 static struct arp_option_vec get_options()
 {
     struct arp_option_vec options;
-    vec_init(options);
+    vec_init_old(options);
     struct arp_option option = { .short_form = 'h', .long_form = "help",
         .help_text = "Print this help message.", .argument_name = NULL
     };
-    vec_append(options, option);
+    vec_append_old(options, option);
 
     option.short_form = 'o';
     option.long_form = "output";
@@ -169,7 +169,7 @@ static struct arp_option_vec get_options()
                        " By default calculates a reasonable file name"
                        " and doesn't overwrite any existing file.";
     option.argument_name = "FILE";
-    vec_append(options, option);
+    vec_append_old(options, option);
 
     option.short_form = 'f';
     option.long_form = "format";
@@ -179,19 +179,19 @@ static struct arp_option_vec get_options()
                        " as for graphviz:"
                        " http://www.graphviz.org/doc/info/output.html.";
     option.argument_name = "FORMAT";
-    vec_append(options, option);
+    vec_append_old(options, option);
 
     option.short_form = 'g';
     option.long_form = "debug";
     option.help_text = "Debug mode. Shows false-positives.";
     option.argument_name = NULL;
-    vec_append(options, option);
+    vec_append_old(options, option);
 
     option.short_form = 'd';
     option.long_form = "date";
     option.help_text = "Get legislation from that date. Format is yyyy-mm-dd.";
     option.argument_name = "DATE";
-    vec_append(options, option);
+    vec_append_old(options, option);
     return options;
 }
 

@@ -26,32 +26,22 @@
 #include "util.h"
 #include "web.h"
 
-static xmlChar* filter_triple_dots(const xmlChar* text)
+static struct string filter_triple_dots(struct string text)
 {
-    xmlChar* filtered_text = malloc(sizeof(xmlChar) * (xmlStrlen(text) + 1));
-    if (filtered_text == NULL)
+    struct string filtered_text = str_init();
+
+    for (int i = 0; i < str_length(text); i++)
     {
-        abort();
-    }
-
-    xmlChar* filtered_text_p = filtered_text;
-    while (true)
-    {
-        if (*text == '.' && *(text + 1) == '.' && *(text + 2) == '.')
+        if (str_elem(text, i) == '.' && str_elem(text, i + 1) == '.'
+                && str_elem(text, i + 2) == '.')
         {
-            text += 3;
-            continue;
-        }
+            str_append(&filtered_text, str_substring_end(text, 0, i));
 
-        *filtered_text_p = *text;
-        if (*text == '\0')
-        {
-            break;
+            i += 2;
+            text = str_substring(text, i + 1);
         }
-
-        filtered_text_p++;
-        text++;
     }
+    str_append(&filtered_text, text);
 
     return filtered_text;
 }
@@ -59,11 +49,6 @@ static xmlChar* filter_triple_dots(const xmlChar* text)
 static const char* char_from_xml(const xmlChar* text)
 {
     return (const char*) text;
-}
-
-static const xmlChar* xml_from_char(const char* text)
-{
-    return (const xmlChar*) text;
 }
 
 struct SAX_state
@@ -125,17 +110,15 @@ static void sax_end_element(void* user_data, const xmlChar* name)
     {
         state.section_depth -= 1;
         struct string node_text_w_three_dots = state.section_text;
-        xmlChar* node_text = filter_triple_dots(
-                                 xml_from_char(str_content(node_text_w_three_dots)));
+        struct string node_text = filter_triple_dots(node_text_w_three_dots);
 
-        struct section_references references = get_references_from_text(
-                char_from_xml(node_text));
-        xmlFree(node_text);
+        struct section_references references = get_references_from_text(node_text);
+        str_free(&node_text);
 
         struct section section;
         section.id = state.section_number;
         section.references = references;
-        vec_append(state.result, section);
+        vec_append_old(state.result, section);
         str_free(&state.section_text);
     }
 
@@ -192,16 +175,16 @@ static xmlSAXHandler sax = { .startElement = sax_start_element, .endElement =
                              .error = sax_error, .fatalError = sax_fatal_error
                            };
 
-static bool get_sections_from_page(struct section_vec* result, struct page page)
+static bool get_sections_from_page(struct section_vec* result, struct string page)
 {
     struct SAX_state sax_state =
     { .section_depth = 0 };
-    vec_init(sax_state.result);
+    vec_init_old(sax_state.result);
 
-    if (xmlSAXUserParseMemory(&sax, &sax_state, page.contents,
-                              page.contents_size) != 0)
+    if (xmlSAXUserParseMemory(&sax, &sax_state, str_content(page),
+                              str_length(page)) != 0)
     {
-        assert(vec_length(sax_state.result) <= 0);
+        assert(vec_length_old(sax_state.result) <= 0);
         vec_free(sax_state.result);
         return false;
     }
@@ -229,25 +212,22 @@ static int32_t find_space(const char* string)
 bool get_sections_from_legislation(struct section_vec* result,
                                    struct leg_id legislation)
 {
-    struct string url = get_api_url(legislation);
+    struct string url = get_leg_api_url(legislation);
 
-    CURLcode curl_error;
     char curl_error_string[CURL_ERROR_SIZE];
-    struct page page = get_web_page(str_content(url), &curl_error,
+    struct string page;
+    bool success = get_web_page(&page, str_content(url),
                                     curl_error_string);
-    bool success = true;
-    if (curl_error != CURLE_OK)
+    if (!success)
     {
-        success = false;
         assert(strlen(curl_error_string) > 0);
         fprintf(stderr, "%s\n", curl_error_string);
         goto end;
     }
 
     success = get_sections_from_page(result, page);
-
 end:
-    free(page.contents);
+    str_free(&page);
     str_free(&url);
     return success;
 }

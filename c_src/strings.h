@@ -7,7 +7,7 @@
 
 struct string
 {
-    struct vector2 content;
+    struct vector content;
     int32_t length;
     enum { DYNAMIC, STATIC, CONSTANT } type;
 };
@@ -15,8 +15,12 @@ struct string
 struct string str_c(const char* string);
 int32_t str_length(struct string string);
 char* str_content(struct string string);
+char str_elem(struct string text, int index);
 bool str_is_empty(struct string string);
-bool str_equal(struct string str1, struct string str2);
+bool str_is_equal(struct string str1, struct string str2);
+struct string str_substring(struct string string, int limit);
+struct string str_substring_end(struct string string, int begin_index,
+                                int end_index);
 
 // DYNAMIC or STATIC
 struct string str_init_s(char* buffer, int32_t size);

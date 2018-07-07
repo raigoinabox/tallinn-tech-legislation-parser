@@ -9,11 +9,16 @@
 
 #include <string.h>
 
-void vec_init_size2(struct vector2* vec_p, int size, int elem_size)
+void vec_init(struct vector* vector, int elem_size)
+{
+    vec_init_size(vector, elem_size, 16);
+}
+
+void vec_init_size(struct vector* vec_p, int elem_size, int size)
 {
     assert(0 < size);
     assert(0 < elem_size);
-    struct vector2 vec = *vec_p;
+    struct vector vec = *vec_p;
     vec.capacity = size;
     vec.elem_size = elem_size;
     vec.length = 0;
@@ -21,12 +26,12 @@ void vec_init_size2(struct vector2* vec_p, int size, int elem_size)
     *vec_p = vec;
 }
 
-void vec_init_c2(struct vector2* vec_p, const void* content, int length, int elem_size)
+void vec_c(struct vector* vec_p, const void* content, int length, int elem_size)
 {
     assert(content != NULL);
     assert(0 <= length);
     assert(0 < elem_size);
-    struct vector2 vec = *vec_p;
+    struct vector vec = *vec_p;
     vec.capacity = length;
     vec.content = (void*) content;
     vec.elem_size = elem_size;
@@ -34,54 +39,96 @@ void vec_init_c2(struct vector2* vec_p, const void* content, int length, int ele
     *vec_p = vec;
 }
 
-void _vec_free(void* pointer)
+void vec_destroy(struct vector* vector_p)
 {
-    struct vector2* vector_p = pointer;
-    struct vector2 vector = *vector_p;
-    vec_free(vector);
+    struct vector vector = *vector_p;
+    free(vector.content);
+    vector.capacity = 0;
+    vector.content = NULL;
+    vector.length = 0;
     *vector_p = vector;
 }
 
-void vec_reserve(struct vector2* vector_p, vec_size elem_count)
+void vec_reserve(struct vector* vector_p, vec_size elem_count)
 {
-    struct vector2 vector = *vector_p;
-    int new_capacity = vector.capacity;
-    while (new_capacity - vector.length < elem_count)
+    struct vector vector = *vector_p;
+    int necessary_capacity = vector.length + elem_count;
+    if (vector.capacity < necessary_capacity)
     {
-        new_capacity *= 2;
-    }
-
-    if (vector.capacity < new_capacity)
-    {
-        vector.capacity = new_capacity;
+        vector.capacity = necessary_capacity * 2;
         vector.content = realloc_a(vector.content, vector.capacity,
-                vector.elem_size);
+                                   vector.elem_size);
     }
     *vector_p = vector;
 }
 
-void vec_set2(struct vector2* vector_p, int index, void* elem)
+void* vec_elem(struct vector vector, int index)
 {
     assert(0 <= index);
-    struct vector2 vector = *vector_p;
     assert(index < vector.length);
-    void* dest = (char*) vector.content + (index * vector.elem_size);
+    return (char*) vector.content + (index * vector.elem_size);
+}
+
+void vec_set(struct vector* vector_p, int index, void* elem)
+{
+    struct vector vector = *vector_p;
+    void* dest = vec_elem(vector, index);
     memmove(dest, elem, vector.elem_size);
 }
 
-void vec_append2(struct vector2* vec_p, void* elem)
+void vec_append(struct vector* vec_p, void* elem)
 {
     vec_reserve(vec_p, 1);
     vec_p->length += 1;
-    vec_set2(vec_p, vec_p->length - 1, elem);
+    vec_set(vec_p, vec_p->length - 1, elem);
 }
 
-int vec_len(struct vector2 vec)
+int vec_length(struct vector vec)
 {
     return vec.length;
 }
 
-int vec_cap(struct vector2 vec)
+int vec_capacity(struct vector vec)
 {
     return vec.capacity;
+}
+
+struct vector vec_subvector(struct vector vector, int begin_index)
+{
+    return vec_subvector_end(vector, begin_index, vector.length);
+}
+
+struct vector vec_subvector_end(struct vector vector, int begin_index,
+                                int end_index)
+{
+    assert(0 <= begin_index);
+    assert(0 <= end_index);
+    assert(begin_index < vector.length);
+    assert(end_index <= vector.length);
+
+    struct vector subvector = vector;
+    subvector.content = vec_elem(vector, begin_index);
+    subvector.length = end_index - begin_index;
+    return subvector;
+}
+
+struct vec_iterator vec_iterator(struct vector vector)
+{
+    struct vec_iterator iterator;
+    iterator.vector = vector;
+    iterator.index = -1;
+    return iterator;
+}
+
+bool vec_iter_next(void* result, struct vec_iterator* iterator)
+{
+    iterator->index++;
+    if (vec_length(iterator->vector) <= iterator->index)
+    {
+        return false;
+    }
+
+    memmove(result, vec_elem(iterator->vector, iterator->index),
+            iterator->vector.elem_size);
+    return true;
 }

@@ -34,12 +34,12 @@ static int fprintf_a(FILE* file, const char* template, ...)
 
 static void print_csv_format(FILE* file, struct section_vec connections)
 {
-    for (int32_t i = 0; i < vec_length(connections); i++)
+    for (int32_t i = 0; i < vec_length_old(connections); i++)
     {
-        struct section section = vec_elem(connections, i);
-        for (int32_t j = 0; j < vec_length(section.references); j++)
+        struct section section = vec_elem_old(connections, i);
+        for (int32_t j = 0; j < vec_length_old(section.references); j++)
         {
-            struct string reference = vec_elem(section.references, j);
+            struct string reference = vec_elem_old(section.references, j);
             fprintf_a(file, "%s;%s\n", section.id, str_content(reference));
         }
     }
@@ -99,15 +99,15 @@ void print_graph(FILE* file, struct section_vec connections,
     else
     {
         Agraph_t *graph = agopen("G", Agstrictdirected, NULL);
-        for (int32_t i = 0; i < vec_length(connections); i++)
+        for (int32_t i = 0; i < vec_length_old(connections); i++)
         {
-            struct section section = vec_elem(connections, i);
+            struct section section = vec_elem_old(connections, i);
             struct string section_node_id = get_node_id(section.id);
             Agnode_t *node = agnode(graph, str_content(section_node_id), 1);
             str_free(&section_node_id);
             agsafeset(node, "label", str_content(section.id), "");
             for (int32_t ref_i = 0;
-                    ref_i < vec_length(section.references);
+                    ref_i < vec_length_old(section.references);
                     ref_i++)
             {
                 struct string ref_node_id = get_node_id(get_reference(section, ref_i));

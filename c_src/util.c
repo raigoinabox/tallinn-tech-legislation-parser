@@ -5,7 +5,8 @@
 
 void* malloc_a(size_t elem_count, size_t elem_size)
 {
-    if (SIZE_MAX / elem_count < elem_size) {
+    if (SIZE_MAX / elem_count < elem_size)
+    {
         fprintf(stderr, "error: requested too much memory\n");
         abort();
     }
@@ -21,7 +22,8 @@ void* malloc_a(size_t elem_count, size_t elem_size)
 
 void* realloc_a(void* pointer, size_t nmemb, size_t memb_size)
 {
-    if (SIZE_MAX / nmemb < memb_size) {
+    if (SIZE_MAX / nmemb < memb_size)
+    {
         abort();
     }
     void* result = realloc(pointer, nmemb * memb_size);

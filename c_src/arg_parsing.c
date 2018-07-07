@@ -21,9 +21,9 @@ static bool find_option(struct arp_option* result,
                         struct arp_option_vec options, const char short_form)
 {
     for (vec_size option_index = 0;
-            option_index < vec_length(options); option_index++)
+            option_index < vec_length_old(options); option_index++)
     {
-        struct arp_option option = vec_elem(options, option_index);
+        struct arp_option option = vec_elem_old(options, option_index);
 //		struct arp_option option = vec_get(options, option_index);
         if (short_form == option.short_form)
         {
@@ -85,10 +85,10 @@ static bool next_long_option(struct arp_parser* parser_p,
     struct arp_parser parser = *parser_p;
 
     for (vec_size option_index = 0;
-            option_index < vec_length(parser.options);
+            option_index < vec_length_old(parser.options);
             option_index++)
     {
-        struct arp_option option = vec_elem(parser.options, option_index);
+        struct arp_option option = vec_elem_old(parser.options, option_index);
 
         char split_argument[strlen(argument) + 10];
         strcpy(split_argument, argument + 2);
@@ -244,9 +244,9 @@ const char* arp_get_arg(struct arp_parser parser)
 
 void arp_print_options_help(struct arp_option_vec options)
 {
-    for (vec_size i = 0; i < vec_length(options); i++)
+    for (vec_size i = 0; i < vec_length_old(options); i++)
     {
-        struct arp_option option = vec_elem(options, i);
+        struct arp_option option = vec_elem_old(options, i);
         char mod_long_form[strlen(option.long_form)
                            + (option.argument_name == NULL ?
                               0 : strlen(option.argument_name)) + 10];

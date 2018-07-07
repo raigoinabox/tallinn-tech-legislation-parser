@@ -31,21 +31,70 @@ struct leg_complex
 {
     struct leg_id legislation;
     const char* dbu_category;
-    double complexity1;
-    double complexity2;
+    // double
+    struct vector complexities;
 };
 
 vec_struct(leg_complex_list, struct leg_complex);
 
 struct dbu_category_complexity
 {
-    double complexity1_total;
-    double complexity2_total;
     int32_t legislation_count;
+    // double
+    struct vector complexity_totals;
 };
 
-MAP_DECLARE(static, const char*, struct dbu_category_complexity, cat_compl_list)
-MAP_DEFINE(static, const char*, struct dbu_category_complexity, cat_compl_list)
+static struct leg_complex init_leg_complex(struct leg_id legislation,
+        const char* dbu_category)
+{
+    struct leg_complex result;
+    result.legislation = legislation;
+    result.dbu_category = dbu_category;
+    vec_init(&result.complexities, sizeof(double));
+    return result;
+}
+
+static void destroy_leg_complex(struct leg_complex* leg_complex)
+{
+    vec_destroy(&leg_complex->complexities);
+}
+
+static void destroy_leg_complex_list(struct leg_complex_list* vector)
+{
+    for (int i = 0; i < vec_length_old(*vector); i++)
+    {
+        struct leg_complex leg_complex = vec_elem_old(*vector, i);
+        destroy_leg_complex(&leg_complex);
+    }
+    vec_free(*vector);
+}
+
+static struct dbu_category_complexity init_dbu_cat_complexity()
+{
+    struct dbu_category_complexity dbu_complexity;
+    dbu_complexity.legislation_count = 1;
+    vec_init(&dbu_complexity.complexity_totals, sizeof(double));
+    return dbu_complexity;
+}
+
+static void destroy_dbu_cat_complexity(struct dbu_category_complexity*
+                                       complexity)
+{
+    //but why destroy cat??
+    vec_destroy(&complexity->complexity_totals);
+}
+
+static void destroy_cat_complex_list(struct map* cat_compl_list)
+{
+    struct map_iterator iter = map_iterator(*cat_compl_list);
+    struct map_entry entry;
+    while (map_iterator_next(&entry, &iter))
+    {
+        struct dbu_category_complexity* complex = entry.value;
+        destroy_dbu_cat_complexity(complex);
+    }
+    map_free(cat_compl_list);
+}
 
 static bool get_average_vertex_degree(double* result, const igraph_t* graph)
 {
@@ -69,17 +118,17 @@ static bool get_sections_graph(igraph_t* graph, struct section_vec section_vec)
         success = false;
         goto exit;
     }
-    for (vec_size i = 0; i < vec_length(section_vec); i++)
+    for (vec_size i = 0; i < vec_length_old(section_vec); i++)
     {
-        struct section section = vec_elem(section_vec, i);
-        for (vec_size j = 0; j < vec_length(section.references); j++)
+        struct section section = vec_elem_old(section_vec, i);
+        for (vec_size j = 0; j < vec_length_old(section.references); j++)
         {
-            struct string reference = vec_elem(section.references, j);
+            struct string reference = vec_elem_old(section.references, j);
             vec_size ref_index = -1;
-            for (vec_size k = 0; k < vec_length(section_vec); k++)
+            for (vec_size k = 0; k < vec_length_old(section_vec); k++)
             {
-                struct section test_section = vec_elem(section_vec, k);
-                if (str_equal(reference, test_section.id))
+                struct section test_section = vec_elem_old(section_vec, k);
+                if (str_is_equal(reference, test_section.id))
                 {
                     ref_index = k;
                     break;
@@ -100,13 +149,15 @@ static bool get_sections_graph(igraph_t* graph, struct section_vec section_vec)
             }
         }
     }
-    if (igraph_empty(graph, vec_length(section_vec), IGRAPH_DIRECTED) != IGRAPH_SUCCESS)
+    if (igraph_empty(graph, vec_length_old(section_vec),
+                     IGRAPH_DIRECTED) != IGRAPH_SUCCESS)
     {
         success = false;
         goto exit;
     }
     if (igraph_add_edges(graph, &edges, 0) != IGRAPH_SUCCESS)
     {
+        igraph_destroy(graph);
         success = false;
         goto exit;
     }
@@ -117,7 +168,8 @@ exit:
     return success;
 }
 
-static bool get_legislation_sections(struct section_vec* result, struct leg_id legislation)
+static bool get_legislation_sections(struct section_vec* result,
+                                     struct leg_id legislation)
 {
     if (!get_sections_from_legislation(result, legislation))
     {
@@ -148,147 +200,184 @@ static struct leg_complex_list get_leg_complexities(
     struct law_category_list law_categories, struct string date)
 {
     struct leg_complex_list leg_complex_list;
-    vec_init(leg_complex_list);
-    for (int32_t i = 0; i < vec_length(law_categories); i++)
+    vec_init_old(leg_complex_list);
+    for (int32_t i = 0; i < vec_length_old(law_categories); i++)
     {
-        struct dbu_law_category law_category = vec_elem(law_categories, i);
+        struct dbu_law_category law_category = vec_elem_old(law_categories, i);
 
-        for (int32_t j = 0; j < vec_length(law_category.laws); j++)
+        for (int32_t j = 0; j < vec_length_old(law_category.laws); j++)
         {
-            struct leg_id leg_id = vec_elem(law_category.laws, j);
+            struct leg_id leg_id = vec_elem_old(law_category.laws, j);
             leg_id.version_date = date;
-            igraph_t graph;
+            igraph_t graph = { 0 };
             if (!get_legislation_graph(&graph, leg_id))
             {
                 continue;
             }
 
             double avg_vertex_degree;
-            if (!get_average_vertex_degree(&avg_vertex_degree, &graph)) {
-                continue;
+            if (!get_average_vertex_degree(&avg_vertex_degree, &graph))
+            {
+                goto loop_end;
             }
-            igraph_real_t avg_path_length;
+            double avg_path_length;
             if (igraph_ecount(&graph) <= 0)
             {
                 avg_path_length = 0;
-            } else if (igraph_average_path_length(&graph, &avg_path_length, true, true)
+            }
+            else if (igraph_average_path_length(&graph, &avg_path_length, true, true)
+                     != IGRAPH_SUCCESS)
+            {
+                goto loop_end;
+            }
+            igraph_integer_t graph_diameter_i;
+            if (igraph_diameter(&graph, &graph_diameter_i, NULL, NULL, NULL, true, true)
                     != IGRAPH_SUCCESS)
             {
-                continue;
+                goto loop_end;
             }
-            igraph_destroy(&graph);
+            double graph_diameter = graph_diameter_i;
+            double transitivity;
+            if (igraph_transitivity_undirected(
+                    &graph,
+                    &transitivity,
+                    IGRAPH_TRANSITIVITY_ZERO) != IGRAPH_SUCCESS) {
+                goto loop_end;
+            }
 
-            for (int32_t j = 0; j < vec_length(law_category.dbu_categories);
+            for (int32_t j = 0; j < vec_length_old(law_category.dbu_categories);
                     j++)
             {
-                const char* dbu_category = vec_elem(
+                const char* dbu_category = vec_elem_old(
                                                law_category.dbu_categories, j);
-                struct leg_complex leg_complex;
-                leg_complex.dbu_category = dbu_category;
-                leg_complex.complexity1 = avg_vertex_degree;
-                leg_complex.complexity2 = avg_path_length;
-                vec_append(leg_complex_list, leg_complex);
+                struct leg_complex leg_complex = init_leg_complex(leg_id, dbu_category);
+                vec_append(&leg_complex.complexities, &avg_vertex_degree);
+                vec_append(&leg_complex.complexities, &avg_path_length);
+                vec_append(&leg_complex.complexities, &graph_diameter);
+                vec_append(&leg_complex.complexities, &transitivity);
+                vec_append_old(leg_complex_list, leg_complex);
             }
+loop_end:
+            igraph_destroy(&graph);
         }
     }
     return leg_complex_list;
 }
 
-static struct cat_compl_list get_category_complexities_from_leg(
+static int void_strcmp(void* void1, void* void2)
+{
+    const char** string1 = void1;
+    const char** string2 = void2;
+    return strcmp(*string1, *string2);
+}
+
+// return map(const char*, struct dbu_category_complexity)
+static struct map get_category_complexities_from_leg(
     struct leg_complex_list leg_complex_list)
 {
-    struct cat_compl_list cat_compl_list = cat_compl_list_init(strcmp);
-    for (int32_t i = 0; i < vec_length(leg_complex_list); i++)
+    struct map cat_compl_list = map_init(sizeof(const char*),
+                                         sizeof(struct dbu_category_complexity), void_strcmp);
+    for (int32_t i = 0; i < vec_length_old(leg_complex_list); i++)
     {
-        struct leg_complex leg_complex = vec_elem(leg_complex_list,
+        struct leg_complex leg_complex = vec_elem_old(leg_complex_list,
                                          i);
-        struct dbu_category_complexity complexity;
-
-            if (cat_compl_list_get(&complexity, cat_compl_list,
-                                   leg_complex.dbu_category))
+        struct dbu_category_complexity dbu_complexity;
+        if (map_get(&dbu_complexity, cat_compl_list,
+                    &leg_complex.dbu_category))
         {
-            complexity.legislation_count++;
-            complexity.complexity1_total += leg_complex.complexity1;
-            complexity.complexity2_total += leg_complex.complexity2;
+            dbu_complexity.legislation_count++;
+            for (int i = 0; i < vec_length(leg_complex.complexities); i++)
+            {
+                double* complexity = vec_elem(leg_complex.complexities, i);
+                double* complex_total = vec_elem(dbu_complexity.complexity_totals, i);
+                *complex_total += *complexity;
+            }
         }
         else
         {
-            complexity.legislation_count = 1;
-            complexity.complexity1_total = leg_complex.complexity1;
-            complexity.complexity2_total = leg_complex.complexity2;
+            dbu_complexity = init_dbu_cat_complexity();
+            for (int i = 0; i < vec_length(leg_complex.complexities); i++)
+            {
+                double* complexity = vec_elem(leg_complex.complexities, i);
+                vec_append(&dbu_complexity.complexity_totals, complexity);
+            }
         }
-        cat_compl_list_set(&cat_compl_list, leg_complex.dbu_category,
-                           complexity);
+        map_set(&cat_compl_list, &leg_complex.dbu_category, &dbu_complexity);
     }
 
-    struct cat_compl_list_iterator iterator = cat_compl_list_iterator(
-                cat_compl_list);
-    while (cat_compl_list_iterator_has_next(iterator))
+    struct map_iterator iterator = map_iterator(cat_compl_list);
+    struct map_entry entry;
+    while (map_iterator_next(&entry, &iterator))
     {
-        cat_compl_list_iterator_next(&iterator);
-        struct dbu_category_complexity complexity =
-            cat_compl_list_iterator_get_value(iterator);
-        complexity.complexity1_total = complexity.complexity1_total
-                                      / complexity.legislation_count;
-        complexity.complexity2_total = complexity.complexity2_total
-                                              / complexity.legislation_count;
+        struct dbu_category_complexity* complexity_p = entry.value;
+        struct dbu_category_complexity complexity = *complexity_p;
+        for (int i = 0; i < vec_length(complexity.complexity_totals); i++)
+        {
+            double* total_complex = vec_elem(complexity.complexity_totals, i);
+            *total_complex /= complexity.legislation_count;
+        }
         complexity.legislation_count = 1;
-        MAP_ITERATOR_SET(&iterator, complexity);
+        *complexity_p = complexity;
     }
 
     return cat_compl_list;
 }
 
-static struct cat_compl_list get_category_complexities(
+// return map(const char*, struct dbu_category_complexity)
+static struct map get_category_complexities(
     struct law_category_list law_categories, struct string date)
 {
     struct leg_complex_list leg_complex_list = get_leg_complexities(
                 law_categories, date);
-    struct cat_compl_list cat_compl_list = get_category_complexities_from_leg(
-            leg_complex_list);
-    vec_free(leg_complex_list);
+    struct map cat_compl_list = get_category_complexities_from_leg(
+                                    leg_complex_list);
+    destroy_leg_complex_list(&leg_complex_list);
     return cat_compl_list;
 }
 
+// takes in map(const char*, struct dbu_category_complexity)
 static void print_category_complexities(
-        struct cat_compl_list cat_compl_list, struct string date)
+    struct map cat_compl_list, struct string date)
 {
-    struct cat_compl_list_iterator iterator = cat_compl_list_iterator(
-                cat_compl_list);
-
-    while (cat_compl_list_iterator_has_next(iterator))
+    struct map_iterator iterator = map_iterator(cat_compl_list);
+    struct map_entry entry;
+    while (map_iterator_next(&entry, &iterator))
     {
-        cat_compl_list_iterator_next(&iterator);
-        struct dbu_category_complexity complexity =
-                cat_compl_list_iterator_get_value(iterator);
-        printf_a("%s %s %g\n", str_content(date),
-                cat_compl_list_iterator_get_key(iterator),
-                complexity.complexity1_total);
+        const char** key_p = entry.key;
+        printf_a("%s %s", str_content(date), *key_p);
+        struct dbu_category_complexity* complexity_p = entry.value;
+        struct dbu_category_complexity complexity = *complexity_p;
+        for (int i = 0; i < vec_length(complexity.complexity_totals); i++)
+        {
+            double* complex_total = vec_elem(complexity.complexity_totals, i);
+            printf(" %g", *complex_total);
+        }
+        printf("\n");
     }
 }
 
+// takes in map(*, struct dbu_category_complexity)
 static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
-                             struct cat_compl_list cat_compl_list)
+                             struct map cat_compl_list)
 {
-    struct cat_compl_list_iterator iterator = cat_compl_list_iterator(
-                cat_compl_list);
+    struct map_iterator iterator = map_iterator(cat_compl_list);
     begin_transaction(db_conn);
-    while (cat_compl_list_iterator_has_next(iterator))
+    struct map_entry entry;
+    while (map_iterator_next(&entry, &iterator))
     {
-        cat_compl_list_iterator_next(&iterator);
-        struct dbu_category_complexity complexity =
-                cat_compl_list_iterator_get_value(iterator);
-        struct complexity_result_dto result;
-        result.country = str_c("GB");
-        result.year = year;
-        result.dbu_category = str_c(cat_compl_list_iterator_get_key(iterator));
-        result.complexity = complexity.complexity1_total;
-        result.algorithm = 0;
-        insert_result(db_conn, result);
-
-        result.complexity = complexity.complexity2_total;
-        result.algorithm = 1;
-        insert_result(db_conn, result);
+        struct dbu_category_complexity* complexity = entry.value;
+        for (int i = 0; i < vec_length(complexity->complexity_totals); i++)
+        {
+            double* complex_total = vec_elem(complexity->complexity_totals, i);
+            const char** dbu_category = entry.key;
+            struct complexity_result_dto result;
+            result.country = str_c("GB");
+            result.year = year;
+            result.dbu_category = str_c(*dbu_category);
+            result.complexity = *complex_total;
+            result.algorithm = i + 1;
+            insert_result(db_conn, result);
+        }
     }
     commit_transaction(db_conn);
 }
@@ -296,11 +385,11 @@ static void insert_cat_cmpxs(sqlite3* db_conn, int32_t year,
 static struct arp_option_vec get_options()
 {
     struct arp_option_vec options;
-    vec_init(options);
+    vec_init_old(options);
     struct arp_option option = { .short_form = 'h', .long_form = "help",
         .help_text = "Print this help message.", .argument_name = NULL
     };
-    vec_append(options, option);
+    vec_append_old(options, option);
     return options;
 }
 
@@ -361,12 +450,12 @@ bool save_dbu_compl(const char* prog, const char* command,
 
             const struct law_category_list law_categories =
                 get_english_law_categories();
-            struct cat_compl_list cat_compl_list = get_category_complexities(
-                    law_categories, date);
+            struct map cat_compl_list = get_category_complexities(
+                                            law_categories, date);
             insert_cat_cmpxs(db_conn, i, cat_compl_list);
 
             print_category_complexities(cat_compl_list, date);
-            MAP_FREE(cat_compl_list);
+            destroy_cat_complex_list(&cat_compl_list);
             str_free(&date);
         }
         db_close_conn(db_conn);

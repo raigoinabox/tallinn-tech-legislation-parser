@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS complexity_results;
 DROP TABLE IF EXISTS dbu_results;
 
+
 CREATE TABLE IF NOT EXISTS web_cache (
 	url TEXT NOT NULL UNIQUE,
 	content TEXT NOT NULL
@@ -21,6 +22,8 @@ CREATE TABLE dbu_results (
 	dbu_category TEXT NOT NULL,
 	dtf REAL NOT NULL
 );
+
+create table law ();
 
 INSERT INTO dbu_results (country, year, dbu_category, dtf)
 VALUES
