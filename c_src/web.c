@@ -25,13 +25,14 @@ static bool make_query(struct string* result, const char* url,
 {
     CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
     bool success = true;
+    CURL* handle = { 0 };
     if (code != CURLE_OK)
     {
         success = false;
         goto exit;
     }
 
-    CURL* handle = curl_easy_init();
+    handle = curl_easy_init();
     if (handle == NULL)
     {
         success = false;
