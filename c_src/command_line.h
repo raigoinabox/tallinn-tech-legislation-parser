@@ -4,12 +4,13 @@
 #include <stdint.h>
 
 #include "arg_parsing.h"
+#include "error.h"
 
 struct command
 {
-    char key;
-    const char* command;
+    const char* command_text;
     const char* description;
+    bool (*command)(const char*, const char*, struct arp_parser, struct error*);
 };
 vec_struct(command_vec, struct command);
 

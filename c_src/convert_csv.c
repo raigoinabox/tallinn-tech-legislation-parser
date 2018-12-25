@@ -12,9 +12,12 @@
 
 #include "printing.h"
 
-bool convert_csv(const char* prog, const char* command,
-                 struct arp_parser parser)
+bool convert_csv(
+		const char* prog, const char* command, struct arp_parser parser,
+		struct error* error)
 {
+	(void) error;
+
     // implement -h, -o
     (void) prog;
     (void) command;

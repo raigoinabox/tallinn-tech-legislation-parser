@@ -9,24 +9,25 @@
 
 #include <asm-generic/errno-base.h>
 #include <errno.h>
+#include <legal_act.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "command_line.h"
-#include "legislation.h"
-#include "misc.h"
 #include "printing.h"
 #include "sections.h"
 #include "strings.h"
 #include "vectors.h"
 #include "web.h"
+#include "files.h"
 
 struct run_info
 {
-    struct leg_id legislation;
+    struct legal_act_id legislation;
     FILE* output_file;
     const char* format;
+	const char* layout;
     bool debug;
 };
 
@@ -35,71 +36,11 @@ struct print_args
     const char* url;
     const char* output_file_name;
     const char* format;
+	const char* layout;
     bool print_help;
     bool debug;
-    struct string version_date;
+	const char* version_date;
 };
-
-static void add_default_filename(struct string* result,
-                                 struct leg_id legislation,
-                                 int32_t file_number, struct string format)
-{
-    str_append(result, legislation.type);
-    str_append(result, str_c("_"));
-    str_append(result, legislation.year);
-    str_append(result, str_c("_"));
-    str_append(result, legislation.number);
-    if (!str_is_empty(legislation.version_date))
-    {
-        str_append(result, str_c("_"));
-        str_append(result, legislation.version_date);
-    }
-    if (file_number > 0)
-    {
-        str_append(result, str_c("_"));
-        str_appendf(result, "%d", file_number);
-    }
-    str_append(result, str_c("."));
-    str_append(result, format);
-}
-
-static bool get_default_file(FILE** result, struct leg_id legislation,
-                             const char* format)
-{
-    struct string file_name = str_init_ds(
-                                  str_length(legislation.type) + str_length(legislation.year)
-                                  + str_length(legislation.number) + strlen(format) + 10);
-
-    add_default_filename(&file_name, legislation, 0, str_c(format));
-    FILE* output_file = fopen(str_content(file_name), "r");
-
-    int32_t file_number = 1;
-    while (output_file != NULL)
-    {
-        fclose(output_file);
-        str_clear(&file_name);
-        add_default_filename(&file_name, legislation, file_number, str_c(format));
-
-        output_file = fopen(str_content(file_name), "r");
-        file_number += 1;
-    }
-    if (errno != ENOENT)
-    {
-        perror(str_content(file_name));
-        return false;
-    }
-
-    output_file = fopen(str_content(file_name), "w");
-    if (output_file == NULL)
-    {
-        perror(str_content(file_name));
-        return false;
-    }
-
-    str_free(&file_name);
-    *result = output_file;
-    return true;
-}
 
 static bool process_args(struct run_info* result, struct print_args args)
 {
@@ -107,15 +48,15 @@ static bool process_args(struct run_info* result, struct print_args args)
 
     run_info.debug = args.debug;
 
-    struct leg_id legislation;
+	struct legal_act_id legislation = { 0 };
     if (!parse_leg_url(&legislation, args.url))
     {
         fprintf(stderr, "Url is malformed.\n");
         return false;
     }
-    if (!str_is_empty(args.version_date))
+	if (!str_empty(args.version_date))
     {
-        legislation.version_date = args.version_date;
+		legislation.version_date = args.version_date;
     }
     run_info.legislation = legislation;
 
@@ -127,7 +68,7 @@ static bool process_args(struct run_info* result, struct print_args args)
 
     if (args.output_file_name == NULL)
     {
-        if (!get_default_file(&run_info.output_file, legislation,
+        if (!get_default_law_file(&run_info.output_file, legislation,
                               run_info.format))
         {
             return false;
@@ -147,6 +88,15 @@ static bool process_args(struct run_info* result, struct print_args args)
             return false;
         }
     }
+
+	if (args.layout != NULL)
+	{
+		run_info.layout = args.layout;
+	}
+	else
+	{
+		run_info.layout = "fdp";
+	}
 
     *result = run_info;
     return true;
@@ -180,6 +130,12 @@ static struct arp_option_vec get_options()
                        " http://www.graphviz.org/doc/info/output.html.";
     option.argument_name = "FORMAT";
     vec_append_old(options, option);
+
+	option.short_form = 'l';
+	option.long_form = "layout";
+	option.help_text = "Write output in LAYOUT instead.";
+	option.argument_name = "LAYOUT";
+	vec_append_old(options, option);
 
     option.short_form = 'g';
     option.long_form = "debug";
@@ -216,11 +172,14 @@ static bool parse_args(struct print_args* result_p, const char* prog,
             case 'f':
                 result.format = arp_get_option_arg(parser);
                 break;
+			case 'l':
+				result.layout = arp_get_option_arg(parser);
+				break;
             case 'g':
                 result.debug = true;
                 break;
             case 'd':
-                result.version_date = str_c(arp_get_option_arg(parser));
+				result.version_date = arp_get_option_arg(parser);
                 break;
             default:
                 col_print_command_help(prog, command, options, argument_text);
@@ -255,47 +214,48 @@ static bool parse_args(struct print_args* result_p, const char* prog,
     return true;
 }
 
-bool print_leg(const char* prog, const char* command,
-               struct arp_parser arg_parser)
+bool print_leg(
+		const char* prog, const char* command, struct arp_parser arg_parser,
+		struct error* error)
 {
+	(void) error;
+
     struct print_args args;
     struct arp_option_vec options = get_options();
     const char* argument_text = "legislation_act_url";
-    if (!parse_args(&args, prog, command,
-                    arp_get_parser_from_parser(arg_parser, options), options,
-                    argument_text))
+	bool success = true;
+	success = parse_args(
+			&args, prog, command,
+			arp_get_parser_from_parser(arg_parser, options), options,
+			argument_text);
+	if (success)
     {
-        return false;
-    }
+		if (args.print_help)
+		{
+			success = col_print_command_help(
+					prog, command, options, argument_text);
+		}
+		else
+		{
+			struct run_info run_info;
+			success = process_args(&run_info, args);
+			struct section_vec sections = { 0 };
+			if (success)
+			{
+				success = get_sections_from_legislation(
+						&sections, run_info.legislation, error);
+			}
+			if (success)
+			{
+				// remove_single_sections(&sections);
+				print_section_graph(
+						run_info.output_file, sections, run_info.format,
+						run_info.layout);
+			}
+			sections_free_deep(&sections);
+		}
+	}
 
-    if (args.print_help)
-    {
-        if (!col_print_command_help(prog, command, options, argument_text))
-        {
-            return false;
-        }
-    }
-    else
-    {
-        struct run_info run_info;
-        if (!process_args(&run_info, args))
-        {
-            return false;
-        }
 
-        struct section_vec sections;
-        if (!get_sections_from_legislation(&sections,
-                                           run_info.legislation))
-        {
-            return false;
-        }
-        remove_foreign_sections(sections, args.debug);
-        remove_single_sections(&sections);
-
-        print_graph(run_info.output_file, sections, run_info.format);
-
-        sections_free_deep(&sections);
-    }
-
-    return true;
+	return success;
 }

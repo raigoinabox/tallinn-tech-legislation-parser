@@ -31,8 +31,8 @@ struct map map_init(int32_t key_size, int32_t value_size,
                     int (*comparator)(void* key1, void* key2))
 {
     struct map map;
-    vec_init(&map.keys, key_size);
-    vec_init(&map.values, value_size);
+    map.keys = vec_init(key_size);
+    map.values = vec_init(value_size);
     map.comparator = comparator;
     return map;
 }

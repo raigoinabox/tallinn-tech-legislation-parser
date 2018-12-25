@@ -21,7 +21,7 @@ static bool is_section_connected(struct section_vec sections,
         for (int32_t ref_idx = 0; ref_idx < get_references_count(test_section);
                 ref_idx++)
         {
-            if (str_is_equal(get_reference(test_section, ref_idx), section.id))
+			if (str_equal(get_reference(test_section, ref_idx), section.id))
             {
                 return 1;
             }
@@ -35,7 +35,10 @@ static void free_section(struct section* section_p)
 {
     struct section section = *section_p;
 
-    str_free(&section.id);
+	free(section.id);
+	section.id = NULL;
+	free(section.text);
+	section.text = NULL;
     free_references_deep(&section.references);
 
     *section_p = section;
@@ -61,9 +64,9 @@ int32_t get_references_count(struct section section)
     return vec_length_old(section.references);
 }
 
-struct string get_reference(struct section section, int32_t index)
+char* get_reference(struct section section, int32_t index)
 {
-    return vec_elem_old(section.references, index);
+	return vec_elem_old(section.references, index);
 }
 
 _Bool has_section_references(struct section section)
@@ -79,12 +82,12 @@ void remove_foreign_sections(struct section_vec sections, bool abort_when_found)
         struct section section = vec_elem_old(sections, section_idx);
         for (int32_t ref_i = 0; ref_i < get_references_count(section); ref_i++)
         {
-            struct string reference = get_reference(section, ref_i);
+			char* reference = get_reference(section, ref_i);
 
             bool ref_found = 0;
             for (int32_t i = 0; i < vec_length_old(sections); i++)
             {
-                if (str_is_equal(vec_elem_old(sections, i).id, reference) == 0)
+				if (str_equal(vec_elem_old(sections, i).id, reference))
                 {
                     ref_found = 1;
                     break;
@@ -95,7 +98,7 @@ void remove_foreign_sections(struct section_vec sections, bool abort_when_found)
                 assert(!abort_when_found);
                 vec_remove(section.references, ref_i);
                 ref_i--;
-                str_free(&reference);
+				free(reference);
             }
         }
         vec_set_old(sections, section_idx, section);

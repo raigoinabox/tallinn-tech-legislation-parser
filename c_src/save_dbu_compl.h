@@ -11,8 +11,9 @@
 #include <stdbool.h>
 
 #include "arg_parsing.h"
+#include "error.h"
 
 bool save_dbu_compl(const char* prog, const char* command,
-                    struct arp_parser parser);
+                    struct arp_parser, struct error*);
 
 #endif /* SAVE_DBU_COMPL_H_ */

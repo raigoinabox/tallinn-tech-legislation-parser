@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "misc.h"
+#include "legal_act.h"
 #include "printing.h"
 #include "strings.h"
 #include "util.h"
@@ -262,16 +262,16 @@ void arp_print_options_help(struct arp_option_vec options)
             assert(print_result >= 0);
         }
 
-        struct string result = str_init();
+        struct str_builder result = str_init();
         str_appendf(&result, "  -%c, --%-10s", option.short_form,
                     mod_long_form);
 
-        struct string help_text = fit_text(option.help_text,
+		char* help_text = fit_text(option.help_text,
                                            str_length(result));
-        str_append(&result, help_text);
-        println_a(result);
+		str_appendc(&result, help_text);
+		println_a(str_content(&result));
 
-        str_free(&result);
-        str_free(&help_text);
+        str_builder_destroy(&result);
+		free(help_text);
     }
 }

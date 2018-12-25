@@ -11,8 +11,10 @@
 #include <stdbool.h>
 
 #include "arg_parsing.h"
+#include "error.h"
 
-bool print_leg(const char* prog, const char* command,
-               struct arp_parser arg_parser);
+bool print_leg(
+		const char* prog, const char* command, struct arp_parser arg_parser,
+		struct error*);
 
 #endif /* PRINT_LEG_H_ */

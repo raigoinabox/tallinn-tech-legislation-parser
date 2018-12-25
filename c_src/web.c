@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <curl/easy.h>
 #include <curl/typecheck-gcc.h>
-#include <sqlite3.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -20,14 +19,15 @@ static size_t add_page_content(char* contents, size_t size, size_t nmemb,
     return size_to_write;
 }
 
-static bool make_query(struct string* result, const char* url,
-        char* error_buffer)
+static bool make_query(
+		struct str_builder* result, const char* url, struct error* error)
 {
     CURLcode code = curl_global_init(CURL_GLOBAL_DEFAULT);
     bool success = true;
     CURL* handle = { 0 };
     if (code != CURLE_OK)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
@@ -35,33 +35,39 @@ static bool make_query(struct string* result, const char* url,
     handle = curl_easy_init();
     if (handle == NULL)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_USERAGENT, "leg/1.0");
     if (code != CURLE_OK)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
     code = curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, add_page_content);
     if (code != CURLE_OK)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
-    code = curl_easy_setopt(handle, CURLOPT_URL, url);
+	code = curl_easy_setopt(handle, CURLOPT_URL, url);
     if (code != CURLE_OK)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
+    char error_buffer[CURL_ERROR_SIZE];
     code = curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, error_buffer);
     assert(code == CURLE_OK);
-    struct string page = str_init();
+    struct str_builder page = str_init();
     code = curl_easy_setopt(handle, CURLOPT_WRITEDATA, &page);
     if (code != CURLE_OK)
     {
+		register_error(error, "Unknown error");
         success = false;
         goto exit;
     }
@@ -69,7 +75,7 @@ static bool make_query(struct string* result, const char* url,
     if (code != CURLE_OK)
     {
         success = false;
-        goto exit;
+		register_error(error, str_copy(error_buffer));
     }
 
 exit:
@@ -79,14 +85,14 @@ exit:
     }
     else
     {
-        str_free(&page);
+        str_builder_destroy(&page);
     }
     curl_easy_cleanup(handle);
     curl_global_cleanup();
     return success;
 }
 
-bool parse_leg_url(struct leg_id* result, const char* url)
+bool parse_leg_url(struct legal_act_id* result, const char* url)
 {
     char url_buffer[strlen(url) + 1];
     strcpy(url_buffer, url);
@@ -113,102 +119,91 @@ bool parse_leg_url(struct leg_id* result, const char* url)
         return false;
     }
 
-    struct string leg_type = str_init_ds(strlen(type) + 10);
-    str_appends(&leg_type, type);
-    struct string leg_year = str_init_ds(strlen(year) + 10);
-    str_appends(&leg_year, year);
-    struct string leg_number = str_init_ds(strlen(number) + 10);
-    str_appends(&leg_number, number);
-
-    struct leg_id legislation;
-    legislation.type = leg_type;
-    legislation.year = leg_year;
-    legislation.number = leg_number;
+	struct legal_act_id legislation = { 0 };
+	legislation.type = str_copy(type);
+	legislation.year = str_copy(year);
+	legislation.number = str_copy(number);
 
     *result = legislation;
     return true;
 }
 
-struct string get_leg_api_url(struct leg_id legislation)
+char* get_leg_api_url(struct legal_act_id legislation)
 {
-    struct string url = str_init();
-    str_appends(&url, "http://www.legislation.gov.uk/");
-    str_append(&url, legislation.type);
-    str_appends(&url, "/");
-    str_append(&url, legislation.year);
-    str_appends(&url, "/");
-    str_append(&url, legislation.number);
-    if (str_length(legislation.version_date) == 10)
+    struct str_builder url = str_init();
+    str_appendc(&url, "http://www.legislation.gov.uk/");
+	str_appendc(&url, legislation.type);
+    str_appendc(&url, "/");
+	str_appendc(&url, legislation.year);
+    str_appendc(&url, "/");
+	str_appendc(&url, legislation.number);
+	if (!str_empty(legislation.version_date))
     {
-        str_appends(&url, "/");
-        str_append(&url, legislation.version_date);
+        str_appendc(&url, "/");
+		str_appendc(&url, legislation.version_date);
     }
-    str_appends(&url, "/data.xml");
+    str_appendc(&url, "/data.xml");
 
-    return url;
+	return str_content(&url);
 }
 
-bool get_web_page(
-        struct string* result, const char* url, char* error_buffer)
+static bool insert_cache(
+		struct db_conn db_conn, const char* url, const char* content,
+		struct error* error)
 {
-    sqlite3* db_conn = db_open_conn();
+    struct db_params params = db_params_init();
+	db_params_append(&params, url);
+	db_params_append(&params, content);
+	bool success = db_exec_params(
+			db_conn, "insert into web_cache (url, content) values ($1, $2);",
+			params, error);
+	register_frame(error);
+	return success;
+}
 
-    const char* sql = "select content from web_cache where url = ?;";
-    sqlite3_stmt *statement = db_prepare_stmt(db_conn, sql);
-    db_bind_text(statement, 1, url);
-    bool is_row;
-    if (!db_step(&is_row, statement))
-    {
-        printf_ea(sqlite3_errmsg(db_conn));
-        abort();
-    }
+bool get_web_page(struct str_builder* result, const char* url, struct error* error)
+{
+    struct db_conn db_conn = db_open_conn();
 
-    struct string page = { 0 };
-    if (is_row)
+    struct db_params param_vec = db_params_init();
+	db_params_append(&param_vec, url);
+    const char* sql = "select content from web_cache where url = $1;";
+    struct db_result db_result = {0};
+	if (!db_query_params(&db_result, db_conn, sql, param_vec, error))
+	{
+		print_error(*error);
+		abort();
+	}
+    db_params_destroy(&param_vec);
+
+    struct str_builder page = { 0 };
+	bool success = true;
+	bool is_cached = false;
+    if (db_nrows(db_result) > 0)
     {
-        assert(sqlite3_column_type(statement, 0) == SQLITE_TEXT);
-        const char* cached_content = (const char*) sqlite3_column_text(
-                                         statement, 0);
+        const char* cached_content = db_get_value(db_result, 0, 0);
 
         page = str_init();
-        int contents_size = sqlite3_column_bytes(statement, 0);
-        str_appendn(&page, cached_content, contents_size);
-
-        if (!db_step(&is_row, statement))
-        {
-            printf_ea(sqlite3_errmsg(db_conn));
-            abort();
-        }
-        assert(!is_row);
+        str_appendc(&page, cached_content);
+		is_cached = true;
+	}
+	else
+	{
+		success = make_query(&page, url, error);
     }
 
-    db_close_stmt(statement);
+    db_close_result(db_result);
+	if (success && !is_cached)
+	{
+		success = insert_cache(db_conn, url, str_content(&page), error);
+	}
 
-    bool success = true;
-    if (str_content(page) == NULL)
-    {
-        if (!make_query(&page, url, error_buffer)) {
-            success = false;
-            goto exit;
-        }
+    if (success) {
+    	*result = page;
+	}
 
-        statement = db_prepare_stmt(db_conn,
-                                    "insert into web_cache (url, content) values (?, ?);");
-        db_bind_text(statement, 1, url);
-        db_bind_text(statement, 2, str_content(page));
-        if (!db_step(&is_row, statement))
-        {
-            printf_ea(sqlite3_errmsg(db_conn));
-            abort();
-        }
-        assert(!is_row);
-        db_close_stmt(statement);
-    }
-
-    *result = page;
-exit:
+	register_frame(error);
     db_close_conn(db_conn);
-    *result = page;
     return success;
 }
 

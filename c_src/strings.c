@@ -6,154 +6,104 @@
 #include "strings.h"
 #include "util.h"
 
-static struct string str_c_size(const char* text, int limit)
+static bool is_zero_terminated(struct str_builder string)
 {
-    assert(text != NULL);
-    size_t text_len = 0;
-    while (0 < limit && text[text_len] != '\0')
-    {
-        text_len++;
-        limit--;
-    }
-
-    struct string string;
-    string.length = text_len;
-    string.type = CONSTANT;
-    vec_c(&string.content, text, text_len + 1, sizeof(char));
-
-    return string;
+	if (vec_length(string.content) <= 0)
+	{
+		return false;
+	}
+	else
+	{
+		char* char_p = vec_elem(string.content, vec_length(string.content) - 1);
+		return *char_p == '\0';
+	}
 }
 
-struct string str_c(const char* text)
+int32_t str_length(struct str_builder string)
 {
-    assert(text != NULL);
-    size_t text_len = strlen(text);
-    struct string string;
-    string.length = text_len;
-    string.type = CONSTANT;
-    vec_c(&string.content, text, text_len + 1, sizeof(char));
-
-    return string;
+	if (is_zero_terminated(string))
+	{
+		return vec_length(string.content) - 1;
+	}
+	else
+	{
+		return vec_length(string.content);
+	}
 }
 
-int32_t str_length(struct string string)
+char* str_content(struct str_builder* string)
 {
-    return string.length;
+	if (!is_zero_terminated(*string))
+	{
+		char null = '\0';
+		vec_append(&string->content, &null);
+	}
+	return vec_content(string->content);
 }
 
-char* str_content(struct string string)
+struct str_builder str_substring(struct str_builder string, int begin_index)
 {
-    return string.content.content;
+	struct str_builder substring = string;
+	substring.content = vec_subvector(substring.content, begin_index);
+	return substring;
 }
 
-char str_elem(struct string text, int index)
+static void str_reserve(struct str_builder* string_p, int elem_count)
 {
-    return str_content(text)[index];
+	vec_reserve(&string_p->content, elem_count);
 }
 
-bool str_is_empty(struct string string)
+void str_appendc(struct str_builder* string_p, const char* text)
 {
-    return str_length(string) <= 0;
+	if (str_empty(text))
+	{
+		return;
+	}
+
+	assert(string_p != NULL);
+	struct str_builder string = *string_p;
+
+	str_reserve(&string, strlen(text));
+
+	char character = *text;
+	while (character != '\0')
+	{
+		vec_append(&string.content, &character);
+		text++;
+
+		character = *text;
+	}
+
+	*string_p = string;
 }
 
-bool str_is_equal(struct string str1, struct string str2)
+void str_appendn(struct str_builder* string_p, const char* characters, int32_t limit)
 {
-    if (str_length(str1) != str_length(str2))
-    {
-        return false;
-    }
-    for (int i = 0; i < str_length(str1); i++)
-    {
-        if (str_elem(str1, i) != str_elem(str2, i))
-        {
-            return false;
-        }
-    }
-    return true;
+
+	if (str_empty(characters))
+	{
+		return;
+	}
+
+	assert(string_p != NULL);
+	struct str_builder string = *string_p;
+
+	str_reserve(&string, limit);
+
+	char character = *characters;
+	while (character != '\0' && 0 < limit)
+	{
+		vec_append(&string.content, &character);
+		characters++;
+		limit--;
+
+		character = *characters;
+	}
+
+	*string_p = string;
 }
 
-struct string str_substring(struct string string, int begin_index)
-{
-    return str_substring_end(string, begin_index, string.length);
-}
-
-struct string str_substring_end(struct string string, int begin_index,
-                                int end_index)
-{
-    struct string substring = string;
-    substring.content = vec_subvector_end(substring.content, begin_index,
-                                          end_index);
-    substring.length = end_index - begin_index;
-    return substring;
-}
-
-/*
- * DYNAMIC or STATIC
- */
-
-static void str_reserve(struct string* string_p, int elem_count)
-{
-    struct string string = *string_p;
-    assert(vec_length(string.content) < vec_capacity(string.content)
-           || string.type == DYNAMIC);
-    vec_reserve(&string.content, elem_count);
-    *string_p = string;
-}
-
-struct string str_init_s(char* buffer, int32_t size)
-{
-    struct string string;
-    string.length = 0;
-    string.type = STATIC;
-    vec_init_sta(string.content, buffer, size);
-    char null = '\0';
-    vec_append(&string.content, &null);
-
-    return string;
-}
-
-void str_append(struct string* string_p, struct string append)
-{
-    if (str_length(append) <= 0)
-    {
-        return;
-    }
-    assert(string_p != NULL);
-    struct string string = *string_p;
-    assert(string.type == DYNAMIC || string.type == STATIC);
-
-    str_reserve(&string, str_length(append));
-
-    char character = str_content(append)[0];
-    vec_set(&string.content, vec_length(string.content) - 1, &character);
-    string.length += 1;
-
-    for (int32_t i = 1; i < str_length(append); i++)
-    {
-        char character = str_elem(append, i);
-        vec_append(&string.content, &character);
-        string.length += 1;
-    }
-
-    char null = '\0';
-    vec_append(&string.content, &null);
-
-    *string_p = string;
-}
-
-void str_appends(struct string* string, const char* text)
-{
-    str_append(string, str_c(text));
-}
-
-void str_appendn(struct string* string_p, const char* characters, int32_t limit)
-{
-    assert(characters != NULL);
-    struct string text = str_c_size(characters, limit);
-    str_append(string_p, text);
-}
-
-void str_appendf(struct string* string_p, const char* template, ...)
+void str_appendf(struct str_builder* string_p, const char* template, ...)
 {
     va_list args, args_copy;
     va_start(args, template);
@@ -162,49 +112,137 @@ void str_appendf(struct string* string_p, const char* template, ...)
     int bytes_needed = vsnprintf(NULL, 0, template, args_copy);
     char text[bytes_needed + 10];
     vsprintf(text, template, args);
-    str_appends(string_p, text);
+    str_appendc(string_p, text);
 
     va_end(args_copy);
     va_end(args);
-}
-
-void str_clear(struct string* string_p)
-{
-    struct string string = *string_p;
-    assert(string.type == DYNAMIC || string.type == STATIC);
-    string.length = 0;
-    char null = '\0';
-    vec_set(&string.content, 0, &null);
-    string.content.length = 1;
-    *string_p = string;
 }
 
 /*
  * DYNAMIC
  */
 
-struct string str_init()
+struct str_builder str_init()
 {
-    return str_init_ds(16);
-}
-
-struct string str_init_ds(int32_t size)
-{
-    struct string string;
-    string.length = 0;
-    string.type = DYNAMIC;
-    vec_init_size(&string.content, sizeof(char), size + 1);
-    char null = '\0';
-    vec_append(&string.content, &null);
-
+    struct str_builder string = { 0 };
+    string.content = vec_init(sizeof(char));
     return string;
 }
 
-void str_free(struct string* string_p)
+void str_builder_destroy(struct str_builder* string_p)
 {
-    struct string string = *string_p;
-    assert(string.type == DYNAMIC);
-    vec_destroy(&string.content);
-    string.length = 0;
-    *string_p = string;
+	struct str_builder string = *string_p;
+	vec_destroy(&string.content);
+	*string_p = string;
+}
+
+char* str_from_long(long value)
+{
+	return str_format("%ld", value);
+}
+
+char* str_from_double(double value)
+{
+	return str_format("%f", value);
+}
+
+char* str_copy(const char* from)
+{
+	size_t length = strlen(from);
+	char* new_string = malloc_a(length + 1, sizeof(*from));
+	for (size_t i = 0; i < length + 1; i++)
+	{
+		new_string[i] = from[i];
+	}
+	return new_string;
+}
+
+char* str_format(const char* template, ...)
+{
+	va_list args, args_copy;
+	va_start(args, template);
+	va_copy(args_copy, args);
+
+	int bytes_needed = vsnprintf(NULL, 0, template, args_copy);
+	char text[bytes_needed + 10];
+	vsprintf(text, template, args);
+	char* result = str_copy(text);
+
+	va_end(args_copy);
+	va_end(args);
+
+	return result;
+}
+
+bool str_equal(const char* str1, const char* str2)
+{
+	return strcmp(str1, str2) == 0;
+}
+
+bool str_empty(const char* str)
+{
+	return str == NULL || str[0] == '\0';
+}
+
+const char* str_find(const char* from, const char* substring)
+{
+	int i = 0;
+	int cmp_result;
+	while (*from != '\0' && (cmp_result = strcmp(from, substring)) != 0)
+	{
+		i++;
+		from++;
+	}
+
+	if (cmp_result == 0)
+	{
+		return from;
+	}
+	else
+	{
+		return NULL;
+	}
+}
+
+// no string copying is done, pointers are calculated and nulls are inserted
+// return vector of char*
+struct vector str_split(char* from, const char* substring)
+{
+	struct vector split = vec_init(sizeof(const char*));
+	vec_append(&split, &from);
+	int sub_len = strlen(substring);
+	while (*from != '\0')
+	{
+		if (strncmp(from, substring, sub_len) == 0)
+		{
+			*from = '\0';
+			from += sub_len;
+			vec_append(&split, &from);
+		}
+		else
+		{
+			from++;
+		}
+	}
+	return split;
+}
+
+char* str_trim(char* string)
+{
+	while (*string != '\0' && (*string == '\n' || *string == ' '))
+	{
+		string++;
+	}
+	char* pointer = string;
+	while (*pointer != '\0')
+	{
+		pointer++;
+	}
+	while (pointer != string && (*pointer == '\n' || *pointer == ' '))
+	{
+		pointer = '\0';
+		pointer--;
+	}
+
+	return string;
 }

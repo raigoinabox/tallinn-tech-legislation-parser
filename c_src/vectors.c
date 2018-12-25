@@ -9,34 +9,27 @@
 
 #include <string.h>
 
-void vec_init(struct vector* vector, int elem_size)
+struct vector vec_init(int elem_size)
 {
-    vec_init_size(vector, elem_size, 16);
+    struct vector vector = { 0 };
+    vector.elem_size = elem_size;
+    vector.capacity = 0;
+    vector.content = NULL;
+    vector.length = 0;
+    return vector;
 }
 
-void vec_init_size(struct vector* vec_p, int elem_size, int size)
-{
-    assert(0 < size);
-    assert(0 < elem_size);
-    struct vector vec = *vec_p;
-    vec.capacity = size;
-    vec.elem_size = elem_size;
-    vec.length = 0;
-    vec.content = malloc_a(size, elem_size);
-    *vec_p = vec;
-}
-
-void vec_c(struct vector* vec_p, const void* content, int length, int elem_size)
+struct vector vec_c(const void* content, int length, int elem_size)
 {
     assert(content != NULL);
     assert(0 <= length);
     assert(0 < elem_size);
-    struct vector vec = *vec_p;
+    struct vector vec = { 0 };
     vec.capacity = length;
     vec.content = (void*) content;
     vec.elem_size = elem_size;
     vec.length = length;
-    *vec_p = vec;
+    return vec;
 }
 
 void vec_destroy(struct vector* vector_p)
@@ -60,6 +53,11 @@ void vec_reserve(struct vector* vector_p, vec_size elem_count)
                                    vector.elem_size);
     }
     *vector_p = vector;
+}
+
+void* vec_content(struct vector vector)
+{
+    return vector.content;
 }
 
 void* vec_elem(struct vector vector, int index)

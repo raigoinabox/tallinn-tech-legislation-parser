@@ -6,6 +6,7 @@
  */
 
 #include "doing_business.h"
+#include "legal_act.h"
 
 #include <string.h>
 
@@ -361,6 +362,19 @@ static struct law_vec get_trade_laws()
     return laws;
 }
 
+static char* get_leg_url(struct legal_act_id legislation)
+{
+    struct str_builder url = str_init();
+    str_appendc(&url, "http://www.legislation.gov.uk/");
+	str_appendc(&url, legislation.type);
+    str_appendc(&url, "/");
+	str_appendc(&url, legislation.year);
+    str_appendc(&url, "/");
+	str_appendc(&url, legislation.number);
+
+	return str_content(&url);
+}
+
 void dbu_init()
 {
     vec_init_old(law_categories);
@@ -427,6 +441,17 @@ void dbu_init()
           .laws = get_trade_laws()
     };
     vec_append_old(law_categories, law_category);
+
+    for (int i = 0; i < vec_length_old(law_categories); i++)
+    {
+        struct dbu_law_category law_group = vec_elem_old(law_categories, i);
+		law_group.law_urls = vec_init(sizeof(char*));
+        for (int j = 0; j < vec_length_old(law_group.laws); j++) {
+            struct legal_act_id law = vec_elem_old(law_group.laws, j);
+			char* law_url = get_leg_url(law);
+			vec_append(&law_group.law_urls, &law_url);
+        }
+    }
 }
 
 struct law_category_list get_english_law_categories()

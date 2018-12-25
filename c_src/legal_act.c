@@ -5,7 +5,7 @@
  *      Author: raigo
  */
 
-#include "misc.h"
+#include "legal_act.h"
 
 #include <assert.h>
 #include <curl/curl.h>
@@ -26,22 +26,25 @@
 #include "util.h"
 #include "web.h"
 
-static struct string filter_triple_dots(struct string text)
+static struct str_builder filter_triple_dots(const char* text)
 {
-    struct string filtered_text = str_init();
+    struct str_builder filtered_text = str_init();
 
-    for (int i = 0; i < str_length(text); i++)
-    {
-        if (str_elem(text, i) == '.' && str_elem(text, i + 1) == '.'
-                && str_elem(text, i + 2) == '.')
+	const char* char_p = text;
+	while (*char_p != '\0')
+	{
+		if (str_equal(char_p, "..."))
         {
-            str_append(&filtered_text, str_substring_end(text, 0, i));
-
-            i += 2;
-            text = str_substring(text, i + 1);
+			str_appendn(&filtered_text, text, char_p - text);
+			char_p += 3;
+			text = char_p;
         }
+		else
+		{
+			char_p++;
+		}
     }
-    str_append(&filtered_text, text);
+	str_appendc(&filtered_text, text);
 
     return filtered_text;
 }
@@ -55,8 +58,9 @@ struct SAX_state
 {
     struct section_vec result;
     int section_depth;
-    struct string section_number;
-    struct string section_text;
+	char* section_number;
+    struct str_builder section_text;
+	struct error* error;
 };
 
 static void sax_start_element(void* user_data, const xmlChar* name,
@@ -66,34 +70,28 @@ static void sax_start_element(void* user_data, const xmlChar* name,
 
     struct SAX_state* state_p = user_data;
     struct SAX_state state = *state_p;
-    if (0 < state.section_depth)
+    if (1 <= state.section_depth)
     {
         state.section_depth += 1;
-        goto end;
-    }
-
-    if (attributes == NULL)
-    {
-        goto end;
-    }
-
-    for (int i = 0; attributes[i] != NULL; i += 2)
-    {
-        const size_t prefix_length = strlen("section-");
-        if (xmlStrcmp(attributes[i], (xmlChar*) "id") == 0
-                && xmlStrncmp(attributes[i + 1], (xmlChar*) "section-",
-                              prefix_length) == 0)
+        str_appendc(&state.section_text, " ");
+    } else if (attributes != NULL) {
+        for (int i = 0; attributes[i] != NULL; i += 2)
         {
-            const xmlChar* id = attributes[i + 1];
-            state.section_number = str_init();
-            str_appends(&state.section_number, char_from_xml(id + prefix_length));
-            state.section_depth = 1;
-            state.section_text = str_init();
-            goto end;
+            const size_t prefix_length = strlen("section-");
+            if (xmlStrcmp(attributes[i], (xmlChar*) "id") == 0
+                    && xmlStrncmp(attributes[i + 1], (xmlChar*) "section-",
+                                  prefix_length) == 0)
+            {
+                const xmlChar* id = attributes[i + 1];
+				state.section_number = str_copy(
+						char_from_xml(id + prefix_length));
+                state.section_depth = 1;
+                state.section_text = str_init();
+                break;
+            }
         }
     }
 
-end:
     *state_p = state;
 }
 
@@ -102,24 +100,26 @@ static void sax_end_element(void* user_data, const xmlChar* name)
     (void) name;
     struct SAX_state* state_p = user_data;
     struct SAX_state state = *state_p;
-    if (1 < state.section_depth)
+    if (2 <= state.section_depth)
     {
         state.section_depth -= 1;
+        str_appendc(&state.section_text, " ");
     }
-    else if (0 < state.section_depth)
+    else if (1 <= state.section_depth)
     {
         state.section_depth -= 1;
-        struct string node_text_w_three_dots = state.section_text;
-        struct string node_text = filter_triple_dots(node_text_w_three_dots);
+		struct str_builder node_text = filter_triple_dots(
+				str_content(&state.section_text));
 
         struct section_references references = get_references_from_text(node_text);
-        str_free(&node_text);
 
         struct section section;
-        section.id = state.section_number;
+		section.text = str_content(&node_text);
+		section.id = state.section_number;
         section.references = references;
         vec_append_old(state.result, section);
-        str_free(&state.section_text);
+
+        str_builder_destroy(&state.section_text);
     }
 
     *state_p = state;
@@ -138,8 +138,10 @@ static void sax_characters(void* user_data, const xmlChar* text, int len)
 
 static void sax_warning(void *user_data, const char *msg, ...)
 {
-    (void) user_data;
-    va_list args;
+	struct SAX_state* state = user_data;
+	register_error(state->error, "sax_fatal_error");
+
+	va_list args;
 
     va_start(args, msg);
     printf_ea("sax_warning: ");
@@ -149,8 +151,10 @@ static void sax_warning(void *user_data, const char *msg, ...)
 
 static void sax_error(void *user_data, const char *msg, ...)
 {
-    (void) user_data;
     (void) msg;
+
+	struct SAX_state* state = user_data;
+	register_error(state->error, "sax_error");
 //    va_list args;
 
 //    va_start(args, msg);
@@ -161,7 +165,8 @@ static void sax_error(void *user_data, const char *msg, ...)
 
 static void sax_fatal_error(void *user_data, const char *msg, ...)
 {
-    (void) user_data;
+	struct SAX_state* state = user_data;
+	register_error(state->error, "sax_fatal_error");
     va_list args;
 
     va_start(args, msg);
@@ -170,26 +175,33 @@ static void sax_fatal_error(void *user_data, const char *msg, ...)
     va_end(args);
 }
 
-static xmlSAXHandler sax = { .startElement = sax_start_element, .endElement =
-                                 sax_end_element, .characters = sax_characters, .warning = sax_warning,
-                             .error = sax_error, .fatalError = sax_fatal_error
-                           };
+static xmlSAXHandler sax =
+{ .startElement = sax_start_element, .endElement = sax_end_element,
+		.characters = sax_characters, .warning = sax_warning,
+		.error = sax_error, .fatalError = sax_fatal_error };
 
-static bool get_sections_from_page(struct section_vec* result, struct string page)
+static bool get_sections_from_page(
+		struct section_vec* result, struct str_builder page, struct error* error)
 {
-    struct SAX_state sax_state =
-    { .section_depth = 0 };
+	struct SAX_state sax_state =
+	{ 0 };
     vec_init_old(sax_state.result);
+	sax_state.error = error;
 
-    if (xmlSAXUserParseMemory(&sax, &sax_state, str_content(page),
-                              str_length(page)) != 0)
+	bool success = xmlSAXUserParseMemory(
+			&sax, &sax_state, str_content(&page), str_length(page)) == 0;
+	if (!success)
     {
         assert(vec_length_old(sax_state.result) <= 0);
         vec_free(sax_state.result);
-        return false;
+	}
+	else
+	{
+		*result = sax_state.result;
     }
-    *result = sax_state.result;
-    return true;
+
+	register_frame(error);
+	return success;
 }
 
 static int32_t find_space(const char* string)
@@ -209,30 +221,53 @@ static int32_t find_space(const char* string)
     return -1;
 }
 
-bool get_sections_from_legislation(struct section_vec* result,
-                                   struct leg_id legislation)
+struct legal_act_id leg_init_c(
+		char* type, char* year, char* number)
 {
-    struct string url = get_leg_api_url(legislation);
+	struct legal_act_id leg =
+	{ 0 };
+	leg.type = type;
+	leg.year = year;
+	leg.number = number;
+    return leg;
+}
 
-    char curl_error_string[CURL_ERROR_SIZE];
-    struct string page;
-    bool success = get_web_page(&page, str_content(url),
-                                    curl_error_string);
-    if (!success)
-    {
-        assert(strlen(curl_error_string) > 0);
-        fprintf(stderr, "%s\n", curl_error_string);
-        goto end;
-    }
+void leg_free(struct legal_act_id* legislation_p)
+{
+    struct legal_act_id legislation = *legislation_p;
+	free(legislation.type);
+	legislation.type = NULL;
+	free(legislation.year);
+	legislation.year = NULL;
+	free(legislation.number);
+	legislation.number = NULL;
+    *legislation_p = legislation;
+}
 
-    success = get_sections_from_page(result, page);
-end:
-    str_free(&page);
-    str_free(&url);
+bool get_sections_from_legislation(
+		struct section_vec* result, struct legal_act_id legislation,
+		struct error* error)
+{
+	char* url = get_leg_api_url(legislation);
+
+    struct str_builder page = { 0 };
+	bool success = get_web_page(&page, url, error);
+	if (success)
+	{
+		success = get_sections_from_page(result, page, error);
+	}
+	if (success)
+	{
+		remove_foreign_sections(*result, false);
+	}
+
+	register_frame(error);
+    str_builder_destroy(&page);
+	free(url);
     return success;
 }
 
-struct string fit_text(const char* text, int32_t prefix_length)
+char* fit_text(const char* text, int32_t prefix_length)
 {
     char help_indent[100];
     if (prefix_length > 18)
@@ -252,9 +287,7 @@ struct string fit_text(const char* text, int32_t prefix_length)
 
     int help_text_len = strlen(text);
     int32_t text_read = 0;
-    char split_text_buf[help_text_len * 2 + 10];
-    struct string split_text = str_init_s(split_text_buf,
-                                          sizeof(split_text_buf));
+    struct str_builder split_text = str_init();
     while (text_read < help_text_len)
     {
         int32_t line_length = 0;
@@ -280,11 +313,13 @@ struct string fit_text(const char* text, int32_t prefix_length)
             break;
         }
 
-        str_appends(&split_text, "\n                    ");
+        str_appendc(&split_text, "\n                    ");
         text_read += 1;
     }
 
-    struct string help_text = str_init();
-    str_appendf(&help_text, "%s  %s", help_indent, str_content(split_text));
-    return help_text;
+	char* help_text = str_format(
+			"%s  %s", help_indent, str_content(&split_text));
+
+    str_builder_destroy(&split_text);
+	return help_text;
 }

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <save_graph.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,8 @@
 #include "printing.h"
 #include "save_dbu_compl.h"
 #include "vectors.h"
+#include "leg_feed.h"
+#include "estonia.h"
 
 struct global_args
 {
@@ -74,25 +77,42 @@ static struct command_vec get_commands()
     vec_init_old(commands);
 
     struct command command;
-    command.key = 'p';
-    command.command = "print";
+    command.command_text = "print";
     command.description = "Print legislation url as PDF.";
+    command.command = print_leg;
     vec_append_old(commands, command);
 
-    command.key = 's';
-    command.command = "save-dbu-compl";
+    command.command_text = "save-dbu-compl";
     command.description = "Save the the complexities of law that"
                           " belong into Doing Business report topics"
-                          " into sqlite database data.db table complexity_results.";
+                          " into postgresql database table complexity_results.";
+    command.command = save_dbu_compl;
     vec_append_old(commands, command);
 
-//    command.command = "conv-csv";
-//    command.description = "Convert a csv into a dot format graph.";
-//    vec_append(commands, command);
+    command.command_text = "graph";
+    command.description = "Calculate the graph of laws.";
+    command.command = save_graph;
+    vec_append_old(commands, command);
+
+    command.command_text = "csv";
+    command.description = "Convert a csv into a dot format graph.";
+    command.command = convert_csv;
+    vec_append_old(commands, command);
+
+    command.command_text = "search";
+    command.description = "Search for all laws.";
+    command.command = search_laws;
+    vec_append_old(commands, command);
+
+	command.command_text = "estonia";
+	command.description = "Parse and insert estonian laws.";
+	command.command = estonia;
+	vec_append_old(commands, command);
+
     return commands;
 }
 
-int main(int argc, char const* argv[])
+int main(int argc, const char* argv[])
 {
     if (argc < 1)
     {
@@ -108,6 +128,7 @@ int main(int argc, char const* argv[])
     {
         vec_free(commands);
         vec_free(options);
+        fprintf(stderr, "parse_init_args fail\n");
         return EXIT_FAILURE;
     }
 
@@ -121,27 +142,32 @@ int main(int argc, char const* argv[])
     else
     {
         bool success = false;
+        struct error error = init_error();
         if (args.command == NULL)
         {
             printf_ea("%s: command is required\n", argv[0]);
             col_print_init_help(argv[0], options, commands);
-        }
-        else if (strcmp("print", args.command) == 0)
-        {
-            success = print_leg(argv[0], args.command, parser);
-        }
-        else if (strcmp("save-dbu-compl", args.command) == 0)
-        {
-            success = save_dbu_compl(argv[0], args.command, parser);
-        }
-        else if (strcmp("conv-csv", args.command) == 0)
-        {
-            success = convert_csv(argv[0], args.command, parser);
+			return EXIT_FAILURE;
         }
         else
         {
-            printf_ea("%s: unknown command: %s\n", argv[0], args.command);
-            col_print_init_help(argv[0], options, commands);
+        	bool command_found = false;
+			for (int i = 0; i < vec_length_old(commands); i++)
+			{
+				struct command command = vec_elem_old(commands, i);
+				if (strcmp(args.command, command.command_text) == 0)
+				{
+					command_found = true;
+					success = command.command(
+							argv[0], args.command, parser, &error);
+					break;
+				}
+			}
+			if (!command_found)
+			{
+				printf_ea("%s: unknown command: %s\n", argv[0], args.command);
+				col_print_init_help(argv[0], options, commands);
+			}
         }
 
         vec_free(commands);
@@ -152,6 +178,7 @@ int main(int argc, char const* argv[])
         }
         else
         {
+        	print_error(error);
             return EXIT_FAILURE;
         }
     }

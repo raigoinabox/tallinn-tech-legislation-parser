@@ -22,19 +22,16 @@ typedef ptrdiff_t vec_size;
 	(vector).capacity
 
 #define _vec_elem_size(vector) \
-	sizeof(*vec_content(vector))
-
-#define _vec_elem(vector, index) \
-	vec_content(vector)[index]
+	sizeof(*vec_content_old(vector))
 
 #define _vec_init(vector, content, length, size) \
-	(assert(0 < (size)), vec_content(vector) = (content), \
+	(assert(0 < (size)), vec_content_old(vector) = (content), \
 			vec_length_old(vector) = (length), \
 			vec_capacity_old(vector) = (size))
 
 #define _vec_expand(vector) \
 	(vec_capacity_old(vector) *= 2, \
-			vec_content(vector) = realloc_a(vec_content(vector), \
+			vec_content_old(vector) = realloc_a(vec_content_old(vector), \
 					vec_capacity_old(vector), _vec_elem_size(vector)))
 
 #define _assert_index(vector, index) \
@@ -60,42 +57,38 @@ typedef ptrdiff_t vec_size;
 			0, \
 			size)
 
-#define vec_init_sta(vector, buffer, size) \
-	_vec_init(vector, buffer, 0, size)
-
 #define vec_free(vector) \
-	(free(vec_content(vector)), \
-	vec_content(vector) = NULL, \
+	(free(vec_content_old(vector)), \
+	vec_content_old(vector) = NULL, \
 	vec_length_old(vector) = 0, \
 	vec_capacity_old(vector) = 0)
 
 #define vec_length_old(vector) \
 	(vector).length
 
-#define vec_content(vector) \
+#define vec_content_old(vector) \
 	(vector).content
 
 #define vec_elem_old(vector, index) \
-	(_assert_index(vector, index), \
-			_vec_elem(vector, index))
+    vec_content_old(vector)[index]
 
 #define vec_set_old(vector, index, element) \
 	(_assert_index(vector, index), \
-			_vec_elem(vector, index) = element)
+			vec_elem_old(vector, index) = element)
 
 #define vec_append_old(vector, element) \
 	vec_capacity_old(vector) <= vec_length_old(vector) \
 	? _vec_expand(vector) \
 	: 0, \
 	vec_length_old(vector) += 1, \
-	_vec_elem(vector, vec_length_old(vector) - 1) = element
+	vec_elem_old(vector, vec_length_old(vector) - 1) = element
 
 #define vec_remove(vector, index) \
 	(_assert_index(vector, index), \
 			(index) < vec_length_old(vector) - 1 \
-			? memmove(vec_content(vector) + (index), \
-					vec_content(vector) + (index) + 1, \
-					sizeof(*vec_content(vector)) \
+			? memmove(vec_content_old(vector) + (index), \
+					vec_content_old(vector) + (index) + 1, \
+					sizeof(*vec_content_old(vector)) \
 					* (vec_length_old(vector) - (index) - 1)) \
 			: 0, \
 			vec_length_old(vector)--)
@@ -108,18 +101,20 @@ struct vector
     int elem_size;
 };
 
+#define vec_null { NULL, 0, 0, 0 }
+
 struct vec_iterator
 {
     struct vector vector;
     int index;
 };
 
-void vec_init(struct vector* vector_old, int elem_size);
-void vec_init_size(struct vector* vec_p, int elem_size, int size);
-void vec_c(struct vector* vec_p, const void* content, int length,
+struct vector vec_init(int elem_size);
+struct vector vec_c(const void* content, int length,
            int elem_size);
 void vec_destroy(struct vector* vector_old);
 void vec_reserve(struct vector* vector_p, vec_size elem_count);
+void* vec_content(struct vector vector);
 void* vec_elem(struct vector vector_old, int index);
 void vec_set(struct vector* vector_p, int index, void* elem);
 void vec_append(struct vector* vec_p, void* elem);

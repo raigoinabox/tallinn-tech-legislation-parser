@@ -11,8 +11,10 @@
 #include <stdbool.h>
 
 #include "arg_parsing.h"
+#include "error.h"
 
-bool convert_csv(const char* prog, const char* command,
-                 struct arp_parser parser);
+bool convert_csv(
+		const char* prog, const char* command, struct arp_parser parser,
+		struct error*);
 
 #endif /* CONVERT_CSV_H_ */

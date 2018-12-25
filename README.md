@@ -7,26 +7,32 @@ inside the act.
 
 For more information visit: http://www.legislation.gov.uk/developer
 
-Compilation on Ubuntu
----------------------
+Compilation on Ubuntu 18.04
+---------------------------
 This project uses meson for building: http://mesonbuild.com/.
 
-Install
-* libxml2
-* libcurl
-* libpcre.
+To build and run C code, install: 
+* libcurl4-openssl-dev
+* libxml2-dev
+* libpcre
 * libgraphviz-dev
-* sqlite3
 * libigraph0-dev
+* libpq-dev
 * meson
 
 and write
+> cd c_src
 > mkdir build
 > meson build
 > cd build
 > ninja
 
-The program was written, compiled and tested in Ubuntu 16.04. The code is
+To run python code, install:
+* python3-pip
+* python3-psycopg2
+* spacy (pip3 install -U spacy && python3 -m spacy download en)
+
+The program was written, compiled and tested in Ubuntu 18.04. The code is
 supposed to be portably written and the libraries are supposed to be portable
 as well.
 

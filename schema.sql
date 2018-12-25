@@ -1,32 +1,109 @@
--- DROP TABLE IF EXISTS web_cache;
-DROP TABLE IF EXISTS complexity_results;
-DROP TABLE IF EXISTS dbu_results;
+drop table if exists legal_act_references;
+drop table if exists legal_act_complexities;
+drop table legal_act_section_texts;
+drop table legal_act_sections;
+drop table legal_acts;
+drop table if exists doing_business_results;
+drop table if exists doing_business_laws;
+drop table if exists doing_business_categories;
+drop table doing_business_law_groups;
 
-
-CREATE TABLE IF NOT EXISTS web_cache (
-	url TEXT NOT NULL UNIQUE,
-	content TEXT NOT NULL
+create table if not exists web_cache (
+	url text not null unique,
+	content text not null,
+	cache_time timestamp not null default now()
 );
 
-CREATE TABLE complexity_results (
-	country TEXT NOT NULL,
-	year INTEGER NOT NULL,
-	dbu_category TEXT NOT NULL,
-	complexity REAL NOT NULL,
-	algorithm INTEGER NOT NULL
+create table if not exists sections (
+	row_id serial primary key,
+	country text not null,
+	year integer not null,
+	dbu_category text not null,
+	document_id integer not null,
+	section_id text not null,
+	section_text text not null
 );
 
-CREATE TABLE dbu_results (
-	country TEXT NOT NULL,
-	year INTEGER NOT NULL,
-	dbu_category TEXT NOT NULL,
-	dtf REAL NOT NULL
+create table if not exists section_connections (
+	section_from_id integer not null references sections(row_id),
+	section_to text not null
 );
 
-create table law ();
+create table if not exists complexity_results (
+	country text not null,
+	year integer not null,
+	dbu_category text not null,
+	complexity real not null,
+	algorithm integer not null
+);
 
-INSERT INTO dbu_results (country, year, dbu_category, dtf)
-VALUES
+create table doing_business_law_groups (
+	row_id serial primary key,
+	name text not null unique
+);
+
+create table doing_business_categories (
+	law_group_id int references doing_business_law_groups(row_id),
+	name text not null
+);
+
+create table doing_business_laws (
+	law_group_id int not null references doing_business_law_groups(row_id),
+	country text not null,
+	url text not null
+);
+
+create table doing_business_results (
+	country text not null,
+	year integer not null,
+	dbu_category text not null,
+	dtf real not null
+);
+
+create table legal_acts (
+	row_id serial primary key,
+	title text,
+	url text not null unique,
+	language text not null
+);
+
+create table legal_act_complexities (
+	act_id int not null references legal_acts(row_id),
+	complexity real not null
+);
+
+create table legal_act_sections (
+	row_id serial primary key,
+	act_id int not null references legal_acts(row_id),
+	section_number text not null
+);
+
+create table legal_act_section_texts (
+	section_id int not null references legal_act_sections(row_id),
+	section_text text not null
+);
+
+create table legal_act_references (
+	section_id int not null references legal_act_sections(row_id),
+	reference text not null
+);
+
+do $$
+declare group_id doing_business_law_groups.row_id%TYPE;
+begin
+	select row_id into group_id
+	from doing_business_law_groups where name = 'Banking and Credit Laws'; 
+	
+	
+	-- insert into doing_business_laws (law_group_id, country, url) values
+	--	(group_id, 'ET', 'https://www.riigiteataja.ee/akt/119032015039'),
+	--	(group_id, 'ET', 'https://www.riigiteataja.ee/akt/109052017013');
+		
+end
+$$;
+
+insert into doing_business_results (country, year, dbu_category, dtf)
+values
 ('GB', 2018, 'Starting a Business', 94.58),
 ('GB', 2017, 'Starting a Business', 94.58),
 ('GB', 2016, 'Starting a Business', 94.57),
@@ -161,3 +238,20 @@ VALUES
 ('GB', 2006, 'Resolving Insolvency', 91.77),
 ('GB', 2005, 'Resolving Insolvency', 92.39),
 ('GB', 2004, 'Resolving Insolvency', 92.12);
+
+insert into legal_acts (title, url, language)
+values
+('Võlaõigusseadus', 'https://www.riigiteataja.ee/akt/122032018004', 'est'),
+('Töölepingu seadus', 'https://www.riigiteataja.ee/akt/126102018028', 'est'),
+('Karistusseadustik', 'https://www.riigiteataja.ee/akt/107122018021', 'est'),
+('Äriseadustik', 'https://www.riigiteataja.ee/akt/117112017022', 'est'),
+('Tsiviilkohtumenetluse seadustik', 'https://www.riigiteataja.ee/akt/104072017031', 'est'),
+('Kriminaalmenetluse seadustik', 'https://www.riigiteataja.ee/akt/107122018023', 'est'),
+('Liiklusseadus', 'https://www.riigiteataja.ee/akt/122062018010', 'est'),
+('Eesti Haigekassa tervishoiuteenuste loetelu', 'https://www.riigiteataja.ee/akt/121032018005', 'est'),
+('Veeseadus', 'https://www.riigiteataja.ee/akt/104072017051', 'est'),
+('Asjaõigusseadus', 'https://www.riigiteataja.ee/akt/129062018006', 'est'),
+('Tsiviilseadustiku üldosa seadus', 'https://www.riigiteataja.ee/akt/120042017021', 'est'),
+('Tulumaksuseadus', 'https://www.riigiteataja.ee/akt/129062018049', 'est'),
+('Riigilõivuseadus', 'https://www.riigiteataja.ee/akt/129062018041', 'est'),
+('Eesti Vabariigi põhiseadus', 'https://www.riigiteataja.ee/akt/115052015002', 'est');
