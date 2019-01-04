@@ -151,9 +151,9 @@ static bool insert_cache(
 		struct db_conn db_conn, const char* url, const char* content,
 		struct error* error)
 {
-    struct db_params params = db_params_init();
-	db_params_append(&params, url);
-	db_params_append(&params, content);
+    struct string_vector params = str_vec_init();
+	sve_append(&params, url);
+	sve_append(&params, content);
 	bool success = db_exec_params(
 			db_conn, "insert into web_cache (url, content) values ($1, $2);",
 			params, error);
@@ -165,8 +165,8 @@ bool get_web_page(struct str_builder* result, const char* url, struct error* err
 {
     struct db_conn db_conn = db_open_conn();
 
-    struct db_params param_vec = db_params_init();
-	db_params_append(&param_vec, url);
+    struct string_vector param_vec = str_vec_init();
+	sve_append(&param_vec, url);
     const char* sql = "select content from web_cache where url = $1;";
     struct db_result db_result = {0};
 	if (!db_query_params(&db_result, db_conn, sql, param_vec, error))
@@ -174,7 +174,7 @@ bool get_web_page(struct str_builder* result, const char* url, struct error* err
 		print_error(*error);
 		abort();
 	}
-    db_params_destroy(&param_vec);
+    sve_destroy(&param_vec);
 
     struct str_builder page = { 0 };
 	bool success = true;

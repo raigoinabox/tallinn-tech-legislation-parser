@@ -49,9 +49,9 @@ long db_get_last_insert_row_id(
 		struct error* error)
 {
 
-    struct db_params params = db_params_init();
-	db_params_append(&params, table);
-	db_params_append(&params, column);
+    struct string_vector params = str_vec_init();
+	sve_append(&params, table);
+	sve_append(&params, column);
 	struct db_result db_result = { 0 };
 	if (!db_query_params(
 			&db_result, db_conn,
@@ -60,26 +60,26 @@ long db_get_last_insert_row_id(
 		print_error(*error);
 		abort();
 	}
-    db_params_destroy(&params);
+    sve_destroy(&params);
 
     long int row_id = strtol(db_get_value(db_result, 0, 0), NULL, 10);
     db_close_result(db_result);
     return row_id;
 }
 
-struct db_params db_params_init()
+struct string_vector str_vec_init()
 {
-    struct db_params params = { 0 };
+    struct string_vector params = { 0 };
     params.vector = vec_init(sizeof(const char*));
     return params;
 }
 
-void db_params_destroy(struct db_params* params)
+void sve_destroy(struct string_vector* params)
 {
     vec_destroy(&params->vector);
 }
 
-void db_params_append(struct db_params* params, const char* value)
+void sve_append(struct string_vector* params, const char* value)
 {
 	vec_append(&params->vector, &value);
 }
@@ -101,7 +101,7 @@ bool db_exec(struct db_conn db_conn, const char* sql, struct error* error_p)
 }
 
 bool db_exec_params(
-		struct db_conn db_conn, const char* sql, struct db_params params,
+		struct db_conn db_conn, const char* sql, struct string_vector params,
 		struct error* error)
 {
     struct db_result result = { 0 };
@@ -142,7 +142,7 @@ bool db_query(
 
 bool db_query_params(
 		struct db_result* db_result, struct db_conn db_conn, const char* sql,
-		struct db_params params, struct error* error)
+		struct string_vector params, struct error* error)
 {
 
     struct db_result result = { 0 };

@@ -12,7 +12,7 @@ GetCorrelationsToDtfByAlgorithm <-
       ))
     rbind(
       correlations,
-      by(complexities,
+      "Total correlation" = by(complexities,
          complexities$algorithm,
          GetCorrelationToDtf)
     )

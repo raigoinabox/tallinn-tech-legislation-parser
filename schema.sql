@@ -1,12 +1,13 @@
 drop table if exists legal_act_references;
 drop table if exists legal_act_complexities;
-drop table legal_act_section_texts;
-drop table legal_act_sections;
-drop table legal_acts;
+drop table if exists legal_act_section_texts;
+drop table if exists legal_act_sections;
+drop table if exists legal_acts;
 drop table if exists doing_business_results;
 drop table if exists doing_business_laws;
 drop table if exists doing_business_categories;
-drop table doing_business_law_groups;
+drop table if exists doing_business_law_groups;
+drop table complexity_algorithms;
 
 create table if not exists web_cache (
 	url text not null unique,
@@ -29,12 +30,23 @@ create table if not exists section_connections (
 	section_to text not null
 );
 
+create table complexity_algorithms (
+	row_id serial primary key,
+	name text not null
+);
+insert into complexity_algorithms (row_id, name) values
+(1, 'Average Vertex Degree'),
+(2, 'Average Path Length'),
+(3, 'Diameter'),
+(4, 'Global Clustering Coefficient'),
+(5, 'Kütt Complexity');
+
 create table if not exists complexity_results (
 	country text not null,
 	year integer not null,
 	dbu_category text not null,
 	complexity real not null,
-	algorithm integer not null
+	algorithm integer not null references complexity_algorithms(row_id)
 );
 
 create table doing_business_law_groups (
@@ -59,49 +71,6 @@ create table doing_business_results (
 	dbu_category text not null,
 	dtf real not null
 );
-
-create table legal_acts (
-	row_id serial primary key,
-	title text,
-	url text not null unique,
-	language text not null
-);
-
-create table legal_act_complexities (
-	act_id int not null references legal_acts(row_id),
-	complexity real not null
-);
-
-create table legal_act_sections (
-	row_id serial primary key,
-	act_id int not null references legal_acts(row_id),
-	section_number text not null
-);
-
-create table legal_act_section_texts (
-	section_id int not null references legal_act_sections(row_id),
-	section_text text not null
-);
-
-create table legal_act_references (
-	section_id int not null references legal_act_sections(row_id),
-	reference text not null
-);
-
-do $$
-declare group_id doing_business_law_groups.row_id%TYPE;
-begin
-	select row_id into group_id
-	from doing_business_law_groups where name = 'Banking and Credit Laws'; 
-	
-	
-	-- insert into doing_business_laws (law_group_id, country, url) values
-	--	(group_id, 'ET', 'https://www.riigiteataja.ee/akt/119032015039'),
-	--	(group_id, 'ET', 'https://www.riigiteataja.ee/akt/109052017013');
-		
-end
-$$;
-
 insert into doing_business_results (country, year, dbu_category, dtf)
 values
 ('GB', 2018, 'Starting a Business', 94.58),
@@ -239,9 +208,14 @@ values
 ('GB', 2005, 'Resolving Insolvency', 92.39),
 ('GB', 2004, 'Resolving Insolvency', 92.12);
 
-insert into legal_acts (title, url, language)
-values
-('Võlaõigusseadus', 'https://www.riigiteataja.ee/akt/122032018004', 'est'),
+create table legal_acts (
+	row_id serial primary key,
+	title text,
+	url text not null unique,
+	language text not null
+);
+insert into legal_acts (title, url, language) values
+('Law of Obligations Act 2018', 'https://www.riigiteataja.ee/akt/122032018004', 'est'),
 ('Töölepingu seadus', 'https://www.riigiteataja.ee/akt/126102018028', 'est'),
 ('Karistusseadustik', 'https://www.riigiteataja.ee/akt/107122018021', 'est'),
 ('Äriseadustik', 'https://www.riigiteataja.ee/akt/117112017022', 'est'),
@@ -255,3 +229,24 @@ values
 ('Tulumaksuseadus', 'https://www.riigiteataja.ee/akt/129062018049', 'est'),
 ('Riigilõivuseadus', 'https://www.riigiteataja.ee/akt/129062018041', 'est'),
 ('Eesti Vabariigi põhiseadus', 'https://www.riigiteataja.ee/akt/115052015002', 'est');
+
+create table legal_act_complexities (
+	act_id int not null references legal_acts(row_id),
+	complexity real not null
+);
+
+create table legal_act_sections (
+	row_id serial primary key,
+	act_id int not null references legal_acts(row_id),
+	section_number text not null
+);
+
+create table legal_act_section_texts (
+	section_id int not null references legal_act_sections(row_id),
+	section_text text not null
+);
+
+create table legal_act_references (
+	section_id int not null references legal_act_sections(row_id),
+	reference text not null
+);

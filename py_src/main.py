@@ -26,11 +26,13 @@ def main():
         """select
             legal_act_sections.act_id,
             legal_act_sections.section_number,
-            legal_act_sections.section_text,
+            legal_act_section_texts.section_text,
             legal_act_references.reference
         from legal_act_sections
             join legal_act_references
-                on legal_act_sections.row_id = legal_act_references.section_id""")
+                on legal_act_sections.row_id = legal_act_references.section_id
+            join legal_act_section_texts
+                on legal_act_sections.row_id = legal_act_section_texts.section_id""")
 
     acts = {}
     for row in cursor:

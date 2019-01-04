@@ -44,13 +44,13 @@ int insert_section(
 	char* year = str_from_long(section.year);
 	char* document_id = str_from_long(section.document_id);
 
-    struct db_params params = db_params_init();
-	db_params_append(&params, section.country);
-	db_params_append(&params, year);
-	db_params_append(&params, section.dbu_category);
-	db_params_append(&params, document_id);
-	db_params_append(&params, section.section_id);
-	db_params_append(&params, section.section_text);
+    struct string_vector params = str_vec_init();
+	sve_append(&params, section.country);
+	sve_append(&params, year);
+	sve_append(&params, section.dbu_category);
+	sve_append(&params, document_id);
+	sve_append(&params, section.section_id);
+	sve_append(&params, section.section_text);
 	assert(
 			db_exec_params(
 					db_conn,
@@ -59,7 +59,7 @@ int insert_section(
 
 	free(year);
 	free(document_id);
-    db_params_destroy(&params);
+    sve_destroy(&params);
 
 	return db_get_last_insert_row_id(db_conn, "sections", "row_id", error);
 }
@@ -69,14 +69,14 @@ void insert_section_connection(
         struct section_connection_dto connection) {
 	char* section_from_id = str_from_long(connection.section_from_id);
 
-    struct db_params params = db_params_init();
-	db_params_append(&params, section_from_id);
-	db_params_append(&params, connection.section_to);
+    struct string_vector params = str_vec_init();
+	sve_append(&params, section_from_id);
+	sve_append(&params, connection.section_to);
 	assert(
 			db_exec_params(db_conn, "insert into section_connections" " (section_from_id, section_to)" " values ($1, $2);", params, NULL));
 
 	free(section_from_id);
-    db_params_destroy(&params);
+    sve_destroy(&params);
 }
 
 void insert_law_document(struct db_conn db_conn, struct law_document document) {
@@ -84,12 +84,12 @@ void insert_law_document(struct db_conn db_conn, struct law_document document) {
         struct section section_from = vec_elem_old(document.sections, i);
         for (int j = 0; j < vec_length_old(section_from.references); j++) {
 			const char* section_to = vec_elem_old(section_from.references, j);
-            struct db_params params = db_params_init();
-			db_params_append(&params, section_from.id);
-			db_params_append(&params, section_to);
+            struct string_vector params = str_vec_init();
+			sve_append(&params, section_from.id);
+			sve_append(&params, section_to);
 			assert(
 					db_exec_params(db_conn, "insert into section_connections (section_from, section_to)" " values ($1, $2);", params, NULL));
-            db_params_destroy(&params);
+            sve_destroy(&params);
         }
     }
 }
@@ -102,12 +102,12 @@ bool insert_complx_result(
 	char* complexity = str_from_double(result.complexity);
 	char* algorithm = str_from_long(result.algorithm);
 
-    struct db_params params = db_params_init();
-	db_params_append(&params, result.country);
-	db_params_append(&params, year);
-	db_params_append(&params, result.dbu_category);
-	db_params_append(&params, complexity);
-	db_params_append(&params, algorithm);
+    struct string_vector params = str_vec_init();
+	sve_append(&params, result.country);
+	sve_append(&params, year);
+	sve_append(&params, result.dbu_category);
+	sve_append(&params, complexity);
+	sve_append(&params, algorithm);
 	bool success = db_exec_params(db_conn, "insert into complexity_results"
 			" (country, year, dbu_category, complexity, algorithm)"
 			" values ($1, $2, $3, $4, $5);", params, error);
@@ -115,7 +115,7 @@ bool insert_complx_result(
 	free(year);
 	free(complexity);
 	free(algorithm);
-    db_params_destroy(&params);
+    sve_destroy(&params);
 
 	register_frame(error);
 	return success;
@@ -138,8 +138,8 @@ bool insert_categories(
 	for (int i = 0; success && i < vec_length_old(law_categories); i++)
     {
         struct dbu_law_category law_group = vec_elem_old(law_categories, i);
-        struct db_params params = db_params_init();
-		db_params_append(&params, law_group.name);
+        struct string_vector params = str_vec_init();
+		sve_append(&params, law_group.name);
         struct db_result result = { 0 };
 		if (!db_query_params(
 				&result, db_conn,
@@ -149,7 +149,7 @@ bool insert_categories(
 			print_error(*error);
 			abort();
 		}
-        db_params_destroy(&params);
+        sve_destroy(&params);
 
         const char* law_group_id = db_get_value(result, 0, 0);
 
@@ -157,28 +157,28 @@ bool insert_categories(
 				j++)
         {
             const char* category = vec_elem_old(law_group.dbu_categories, j);
-            params = db_params_init();
-			db_params_append(&params, law_group_id);
-			db_params_append(&params, category);
+            params = str_vec_init();
+			sve_append(&params, law_group_id);
+			sve_append(&params, category);
 			success = db_exec_params(
 					db_conn,
 					"insert into doing_business_categories(law_group_id, name) "
 							"values ($1, $2)", params, error);
-            db_params_destroy(&params);
+            sve_destroy(&params);
         }
 
 		for (int j = 0; success && j < vec_length(law_group.law_urls); j++)
         {
 			char** url = vec_elem(law_group.law_urls, j);
-            params = db_params_init();
-			db_params_append(&params, law_group_id);
-			db_params_append(&params, *url);
+            params = str_vec_init();
+			sve_append(&params, law_group_id);
+			sve_append(&params, *url);
 			success =
 					db_exec_params(
 							db_conn,
 							"insert into doing_business_laws(law_group_id, country, url) "
 									"values ($1, 'GB', $2)", params, error);
-            db_params_destroy(&params);
+            sve_destroy(&params);
         }
     }
 
@@ -189,8 +189,8 @@ bool insert_categories(
 bool delete_legal_act_sections(
 		struct db_conn db_conn, const char* language, struct error* error)
 {
-	struct db_params params = db_params_init();
-	db_params_append(&params, language);
+	struct string_vector params = str_vec_init();
+	sve_append(&params, language);
 	bool success = db_exec_params(
 			db_conn, "delete from legal_act_references"
 					" where section_id in ("
@@ -217,7 +217,7 @@ bool delete_legal_act_sections(
 				params, error);
 	}
 
-	db_params_destroy(&params);
+	sve_destroy(&params);
 	register_frame(error);
 	return success;
 }
@@ -227,13 +227,13 @@ bool delete_legal_acts(
 		struct db_conn db_conn, const char* language, struct error* error)
 {
 
-	struct db_params params = db_params_init();
-	db_params_append(&params, language);
+	struct string_vector params = str_vec_init();
+	sve_append(&params, language);
 
 	bool success = db_exec_params(
 			db_conn, "delete from legal_acts where language = $1", params,
 			error);
-	db_params_destroy(&params);
+	sve_destroy(&params);
 
 	register_frame(error);
 	return success;
@@ -247,16 +247,35 @@ bool insert_legal_acts(
 	for (int i = 0; success && i < vec_length(legal_acts); i++)
 	{
 		struct legal_act_dto* act = vec_elem(legal_acts, i);
-		struct db_params params = db_params_init();
-		db_params_append(&params, act->title);
-		db_params_append(&params, act->url);
-		db_params_append(&params, act->language);
+		struct string_vector params = str_vec_init();
+		sve_append(&params, act->title);
+		sve_append(&params, act->url);
+		sve_append(&params, act->language);
 		success = db_exec_params(
 						db_conn,
 						"insert into legal_acts (title, url, language) values ($1, $2, $3) on conflict (url) do nothing",
 				params, error);
-		db_params_destroy(&params);
+		sve_destroy(&params);
 	}
+
+	register_frame(error);
+	return success;
+}
+
+bool insert_legal_act(
+		struct db_conn db_conn, struct legal_act_dto act, struct error* error)
+{
+	bool success = true;
+	struct string_vector params = str_vec_init();
+	sve_append(&params, act.title);
+	sve_append(&params, act.url);
+	sve_append(&params, act.language);
+	success =
+			db_exec_params(
+					db_conn,
+					"insert into legal_acts (title, url, language) values ($1, $2, $3) on conflict (url) do nothing",
+					params, error);
+	sve_destroy(&params);
 
 	register_frame(error);
 	return success;
@@ -266,14 +285,14 @@ bool get_legal_acts(
 		/* struct legal_act_dto */struct vector* result, struct db_conn db_conn,
 		const char* language, struct error* error)
 {
-	struct db_params params = db_params_init();
-	db_params_append(&params, language);
+	struct string_vector params = str_vec_init();
+	sve_append(&params, language);
 	struct db_result db_result =  { 0 };
 	bool success = db_query_params(
 			&db_result, db_conn,
 			"select row_id, title, url from legal_acts where language = $1",
 			params, error);
-	db_params_destroy(&params);
+	sve_destroy(&params);
 
 	if (success)
 	{
@@ -300,10 +319,10 @@ bool insert_legal_act_section(
 		struct db_conn db_conn, struct legal_act_section_dto* section,
 		struct error* error)
 {
-	struct db_params params = db_params_init();
+	struct string_vector params = str_vec_init();
 	char* row_id = str_from_long(section->act_id);
-	db_params_append(&params, row_id);
-	db_params_append(&params, section->section_number);
+	sve_append(&params, row_id);
+	sve_append(&params, section->section_number);
 	struct db_result db_result = { 0 };
 	bool success = db_query_params(
 			&db_result, db_conn,
@@ -317,7 +336,7 @@ bool insert_legal_act_section(
 	}
 
 	register_frame(error);
-	db_params_destroy(&params);
+	sve_destroy(&params);
 	free(row_id);
 	return success;
 }
@@ -326,16 +345,16 @@ bool insert_legal_act_section_text(
 		struct db_conn db_conn, struct legal_act_section_text_dto section,
 		struct error* error)
 {
-	struct db_params params = db_params_init();
+	struct string_vector params = str_vec_init();
 	char* row_id = str_from_long(section.section_id);
-	db_params_append(&params, row_id);
-	db_params_append(&params, section.section_text);
+	sve_append(&params, row_id);
+	sve_append(&params, section.section_text);
 	bool success = db_exec_params(
 			db_conn,
 			"insert into legal_act_section_texts (section_id, section_text)"
 					" values ($1, $2)", params, error);
 
-	db_params_destroy(&params);
+	sve_destroy(&params);
 	free(row_id);
 	register_frame(error);
 	return success;
@@ -345,16 +364,16 @@ bool insert_legal_act_reference(
 		struct db_conn db_conn, struct legal_act_reference_dto reference,
 		struct error* error)
 {
-	struct db_params params = db_params_init();
+	struct string_vector params = str_vec_init();
 	char* section_id = str_from_long(reference.section_id);
-	db_params_append(&params, section_id);
-	db_params_append(&params, reference.section_to);
+	sve_append(&params, section_id);
+	sve_append(&params, reference.section_to);
 	bool success =
 			db_exec_params(
 					db_conn,
 					"insert into legal_act_references (section_id, reference) values ($1, $2)",
 					params, error);
-	db_params_destroy(&params);
+	sve_destroy(&params);
 	free(section_id);
 
 	register_frame(error);

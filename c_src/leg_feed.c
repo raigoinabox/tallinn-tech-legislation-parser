@@ -132,7 +132,7 @@ bool search_laws(
 	/* struct legal_act_dto */
 	struct vector legal_acts;
 	bool success = get_laws(&legal_acts, error);
-	struct db_conn db_conn = { 0 };
+	struct db_conn db_conn = db_conn_null;
 	if (success) {
 		db_conn = db_open_conn();
 		success = delete_legal_acts(db_conn, ENG_LANG, error);

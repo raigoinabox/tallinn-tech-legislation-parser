@@ -2,9 +2,10 @@ GetComplexities <- function(db.conn) {
   dbGetQuery(
     db.conn,
     paste(
-      "select core.dbu_category, complexity, dtf, algorithm, core.year",
+      "select core.dbu_category, complexity, dtf, complexity_algorithms.name algorithm, core.year",
       "from complexity_results core",
       "join doing_business_results dbre on core.year = dbre.year",
+      "join complexity_algorithms on core.algorithm = complexity_algorithms.row_id",
       "and core.dbu_category = dbre.dbu_category",
       "and core.country = dbre.country",
       "where core.country = 'GB'"
@@ -40,7 +41,7 @@ GetLargestActs <- function(db.conn) {
       "join legal_act_references on legal_act_sections.row_id = legal_act_references.section_id",
       "join legal_act_complexities on legal_acts.row_id = legal_act_complexities.act_id",
       "where legal_acts.language = 'eng'",
-      "group by legal_acts.row_id, complexity order by count(*) desc limit 2"
+      "group by legal_acts.row_id, complexity order by count(*) desc limit 10"
     )
   )
 }
